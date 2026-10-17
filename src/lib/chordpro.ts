@@ -151,3 +151,12 @@ export function diatonicChords(key: string | null | undefined): string[] {
   const deg = (s: number, q = "") => shiftNote(base, s, flat) + q;
   return [deg(0), deg(2, "m"), deg(4, "m"), deg(5), deg(7), deg(9, "m")];
 }
+
+/** Semitonos (-6..5) para pasar del tono rom al tono 	o. */
+export function semitonesBetween(from: string | null | undefined, to: string | null | undefined): number {
+  const a = from ? /^([A-G][#b]?)/.exec(from) : null;
+  const b = to ? /^([A-G][#b]?)/.exec(to) : null;
+  if (!a || !b) return 0;
+  const d = (((NOTE_INDEX[b[1]] - NOTE_INDEX[a[1]]) % 12) + 12) % 12;
+  return d > 6 ? d - 12 : d;
+}
