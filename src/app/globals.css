@@ -333,3 +333,163 @@ h2 { font-size: 1.15rem; font-weight: 600; }
     break-after: page;
   }
 }
+
+/* ---------- CifraClub Sidebar Layout ---------- */
+.cifra-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (min-width: 860px) {
+  .cifra-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.cifra-sidebar {
+  width: 100%;
+  background: rgba(18, 19, 38, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 860px) {
+  .cifra-sidebar {
+    width: 260px;
+    position: sticky;
+    top: 1rem;
+    flex-shrink: 0;
+  }
+}
+
+.cifra-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cifra-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  color: var(--text);
+}
+
+.cifra-menu-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.cifra-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cifra-menu-btn:hover {
+  background: var(--surface-2);
+}
+
+.cifra-menu-btn.active {
+  background: rgba(139, 123, 255, 0.18);
+  color: #fff;
+}
+
+.cifra-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.cifra-status {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.cifra-key-control {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.4rem;
+  border-radius: 8px;
+}
+
+.cifra-mini-btn {
+  background: var(--surface-2);
+  border: 0;
+  color: #fff;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cifra-mini-btn:hover {
+  background: var(--primary);
+}
+
+.cifra-divider {
+  border: 0;
+  height: 1px;
+  background: var(--border);
+  margin: 0.3rem 0;
+}
+
+.cifra-chords-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(18, 19, 38, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.cifra-chord-chip {
+  background: rgba(255, 200, 107, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(255, 200, 107, 0.25);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.text-left {
+  text-align: left;
+}
