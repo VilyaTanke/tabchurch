@@ -51,15 +51,25 @@ export default async function SongsPage({
 
   return (
     <div className="stack">
-      <div className="row">
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div className="grow">
-          <h1>Canciones</h1>
+          <h1>Biblioteca de Canciones</h1>
           <p className="muted" style={{ fontSize: "0.85rem" }}>
-            {totalSongs} {totalSongs === 1 ? "canción encontrada" : "canciones encontradas"}
+            {totalSongs} {totalSongs === 1 ? "canción" : "canciones"} en total
             {totalPages > 1 ? ` · Página ${currentPage} de ${totalPages}` : ""}
           </p>
         </div>
         <Link href="/canciones/nueva" className="btn">+ Nueva</Link>
+      </div>
+
+      {/* Pestañas de Vista */}
+      <div className="row" style={{ gap: "0.5rem" }}>
+        <Link href="/canciones" className="btn small">
+          🕒 Últimas agregadas
+        </Link>
+        <Link href="/canciones/artistas" className="btn ghost small">
+          🎤 Por Artista
+        </Link>
       </div>
 
       <form className="row" role="search">
