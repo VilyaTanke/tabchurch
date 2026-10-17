@@ -99,10 +99,34 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 }
 
 /* ---------- Pantalla de acceso ---------- */
-.auth-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem; }
-.auth-card { width: min(420px, 100%); padding: 2rem; }
-.auth-wrap > div { width: min(420px, 100vw - 3rem); }
+.auth-wrap {
+  min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem;
+  position: relative; isolation: isolate; overflow: hidden;
+  background: #0b0c1c url("/login-bg.jpg") center / cover no-repeat;
+}
+/* viñeta para que el centro respire y el formulario destaque */
+.auth-wrap::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse 55% 60% at 50% 50%, rgba(11, 12, 28, 0.78), rgba(11, 12, 28, 0.2) 100%);
+}
+.auth-card {
+  width: min(440px, 100%); padding: 2.25rem;
+  background: rgba(18, 19, 38, 0.62);
+  border: 1px solid rgba(160, 140, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 30px 80px -20px rgba(0, 0, 0, 0.7), 0 0 60px -15px rgba(139, 123, 255, 0.45);
+  backdrop-filter: blur(22px) saturate(140%);
+  border-radius: 24px;
+}
+.auth-card .brand { font-size: 1.5rem; display: inline-block; filter: drop-shadow(0 0 14px rgba(139, 123, 255, 0.55)); }
+.auth-card h1 { font-size: 2.1rem; margin: 0.25rem 0 0.35rem; text-shadow: 0 0 24px rgba(139, 123, 255, 0.35); }
+.auth-card .input { background: rgba(5, 6, 16, 0.6); }
+.auth-card .btn { min-height: 52px; font-size: 1.05rem; letter-spacing: 0.02em; box-shadow: 0 10px 34px -8px rgba(192, 107, 255, 0.8); }
+.auth-wrap > div { width: min(440px, 100vw - 3rem); }
 .auth-wrap > div .auth-card { width: 100%; }
+@media (min-width: 900px) {
+  .auth-wrap { animation: drift 24s ease-in-out infinite alternate; background-size: 108%; }
+}
+@keyframes drift { from { background-position: 45% 50%; } to { background-position: 55% 52%; } }
 
 /* ---------- App shell: móvil = barra inferior, tablet = barra lateral ---------- */
 .shell { min-height: 100dvh; }
@@ -148,3 +172,39 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Canciones ---------- */
+.song-card { display: flex; flex-direction: column; gap: 0.35rem; transition: transform 0.2s, border-color 0.2s, background 0.2s; }
+.song-card:hover { transform: translateY(-3px); border-color: var(--primary); background: var(--surface-2); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; justify-content: space-between; position: sticky; top: 0.5rem; z-index: 5; padding: 0.75rem 1rem; }
+.key-badge { display: inline-block; min-width: 3ch; text-align: center; font-size: 1.2rem; color: var(--accent); }
+
+.song { font-family: var(--font-sans), sans-serif; line-height: 1.25; }
+.song-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.5em; }
+.song-line.chorus { border-left: 3px solid var(--primary); padding-left: 0.75em; background: rgba(139, 123, 255, 0.07); border-radius: 0 8px 8px 0; }
+.seg { display: inline-flex; flex-direction: column; }
+.chord { font-weight: 700; color: var(--accent); font-size: 0.85em; padding-right: 0.4em; min-height: 1.25em; }
+.chord.raw { color: var(--muted); font-weight: 400; }
+.lyr { white-space: pre-wrap; }
+.song-comment { margin: 0.9em 0 0.4em; font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
+.song-gap { height: 0.8em; }
+
+.editor { min-height: 320px; padding: 0.9rem 1rem; font-family: var(--font-geist-mono), ui-monospace, Consolas, monospace; font-size: 0.95rem; line-height: 1.5; resize: vertical; }
+.editor-split { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+.editor-split .preview { padding: 1rem; border: 1px dashed var(--border); border-radius: 12px; overflow: auto; max-height: 70vh; }
+.editor-split.show-edit .preview { display: none; }
+.editor-split.show-preview .editor { display: none; }
+@media (min-width: 900px) {
+  .editor-split { grid-template-columns: 1fr 1fr; }
+  .editor-split.show-edit .preview, .editor-split.show-preview .editor { display: block; }
+  .seg-toggle { display: none; }
+}
+.seg-toggle { display: inline-flex; background: var(--surface-2); border-radius: 999px; padding: 3px; }
+.seg-toggle button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.85rem; padding: 0.4rem 0.9rem; border-radius: 999px; cursor: pointer; }
+.seg-toggle button.on { background: var(--primary); color: #fff; }
+
+.chip-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none; }
+.chip { flex: none; min-height: 40px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255, 200, 107, 0.12); color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; transition: transform 0.12s, background 0.2s; }
+.chip.alt { background: var(--surface-2); color: var(--text); font-weight: 500; }
+.chip:active { transform: scale(0.93); }
