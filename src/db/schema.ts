@@ -27,6 +27,7 @@ export const songs = sqliteTable("songs", {
   title: text("title").notNull(),
   artist: text("artist"),
   originalKey: text("original_key"),
+  currentKey: text("current_key"),
   tempo: integer("tempo"),
   contentChordpro: text("content_chordpro").notNull().default(""),
   notes: text("notes"),

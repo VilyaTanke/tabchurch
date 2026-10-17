@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS songs (
   title TEXT NOT NULL,
   artist TEXT,
   original_key TEXT,
+  current_key TEXT,
   tempo INTEGER,
   content_chordpro TEXT NOT NULL DEFAULT '',
   notes TEXT,
@@ -72,6 +73,11 @@ function init() {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.exec(DDL);
+  try {
+    sqlite.exec("ALTER TABLE songs ADD COLUMN current_key TEXT;");
+  } catch {
+    // Columna ya existe
+  }
   const db = drizzle(sqlite, { schema });
 
   // Seed del primer administrador (debe cambiar la clave al entrar).

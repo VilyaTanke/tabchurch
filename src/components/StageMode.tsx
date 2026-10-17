@@ -17,6 +17,7 @@ type StageSong = {
   title: string;
   artist: string | null;
   originalKey: string | null;
+  currentKey?: string | null;
   keyOverride: string | null;
   contentChordpro: string;
   notes: string | null;
@@ -41,8 +42,8 @@ export default function StageMode({
 
   const song = songs[index];
 
-  // Cálculo de tono inicial basado en keyOverride o originalKey
-  const initialTargetKey = song?.keyOverride || song?.originalKey || null;
+  // Cálculo de tono inicial basado en keyOverride, currentKey o originalKey
+  const initialTargetKey = song?.keyOverride || song?.currentKey || song?.originalKey || null;
   const initialSteps = useMemo(() => {
     if (!song?.originalKey || !initialTargetKey) return 0;
     return semitonesBetween(song.originalKey, initialTargetKey);

@@ -13,10 +13,13 @@ export async function saveSong(_: FormState, form: FormData): Promise<FormState>
   const title = String(form.get("title") ?? "").trim();
   if (!title) return { error: "El título es obligatorio" };
   const tempoRaw = Number(form.get("tempo"));
+  const originalKey = String(form.get("originalKey") ?? "").trim() || null;
+  const currentKey = String(form.get("currentKey") ?? "").trim() || originalKey;
   const values = {
     title,
     artist: String(form.get("artist") ?? "").trim() || null,
-    originalKey: String(form.get("originalKey") ?? "").trim() || null,
+    originalKey,
+    currentKey,
     tempo: tempoRaw >= 30 && tempoRaw <= 300 ? Math.round(tempoRaw) : null,
     contentChordpro: String(form.get("content") ?? ""),
     notes: String(form.get("notes") ?? "").trim() || null,
@@ -37,6 +40,33 @@ export async function saveSong(_: FormState, form: FormData): Promise<FormState>
   }
   revalidatePath("/canciones");
   redirect(`/canciones/${songId}`);
+}
+
+export async function updateSongKey(songId: number, newKey: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireUser();
+  const song = db
+    .select({ id: schema.songs.id, originalKey: schema.songs.originalKey })
+    .from(schema.songs)
+    .where(and(eq(schema.songs.id, songId), eq(schema.songs.ownerId, user.id)))
+    .get();
+
+  if (!song) return { ok: false, error: "No se encontró la canción" };
+
+  const originalKey = song.originalKey || newKey;
+
+  db.update(schema.songs)
+    .set({
+      currentKey: newKey,
+      originalKey,
+      updatedAt: Math.floor(Date.now() / 1000),
+    })
+    .where(eq(schema.songs.id, songId))
+    .run();
+
+  revalidatePath(`/canciones/${songId}`);
+  revalidatePath("/canciones");
+  revalidatePath("/listas");
+  return { ok: true };
 }
 
 export async function deleteSong(form: FormData) {

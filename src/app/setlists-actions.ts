@@ -99,7 +99,7 @@ export async function addSongToSetlist(setlistId: number, songId: number) {
     .returning({ id: schema.setlistItems.id })
     .get();
   revalidatePath(`/listas/${setlistId}`);
-  return { id: row.id, originalKey: song.originalKey };
+  return { id: row.id, originalKey: song.currentKey || song.originalKey };
 }
 
 export async function removeSetlistItem(setlistId: number, itemId: number) {

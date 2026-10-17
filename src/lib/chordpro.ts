@@ -77,7 +77,11 @@ export function parseChordPro(content: string): Line[] {
   const out: Line[] = [];
   for (const raw of content.replace(/\r/g, "").split("\n")) {
     const line = raw.trimEnd();
-    if (!line.trim()) { out.push({ type: "blank" }); continue; }
+    if (!line.trim()) {
+      if (out.length > 0 && out[out.length - 1].type === "blank") continue;
+      out.push({ type: "blank" });
+      continue;
+    }
     const d = DIRECTIVE_RE.exec(line.trim());
     if (d) {
       const name = d[1].toLowerCase();

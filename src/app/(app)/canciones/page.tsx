@@ -45,7 +45,17 @@ export default async function SongsPage({
             <Link key={s.id} href={`/canciones/${s.id}`} className="card song-card">
               <div className="row">
                 <strong className="grow">{s.title}</strong>
-                {s.originalKey && <span className="badge admin">{s.originalKey}</span>}
+                {(s.currentKey || s.originalKey) && (
+                  <span
+                    className="badge admin"
+                    title={s.originalKey && s.currentKey && s.originalKey !== s.currentKey ? `Tono original: ${s.originalKey}` : undefined}
+                  >
+                    {s.currentKey || s.originalKey}
+                    {s.originalKey && s.currentKey && s.originalKey !== s.currentKey && (
+                      <span style={{ opacity: 0.7, fontSize: "0.75em", marginLeft: "4px" }}>(orig. {s.originalKey})</span>
+                    )}
+                  </span>
+                )}
               </div>
               <div className="muted" style={{ fontSize: "0.9rem" }}>
                 {s.artist || "Sin artista"}{s.tempo ? ` · ${s.tempo} BPM` : ""}

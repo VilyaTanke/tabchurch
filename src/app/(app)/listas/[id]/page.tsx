@@ -36,7 +36,7 @@ export default async function SetlistDetailPage({
     songId: it.song.id,
     title: it.song.title,
     artist: it.song.artist,
-    originalKey: it.song.originalKey,
+    originalKey: it.song.currentKey || it.song.originalKey,
     keyOverride: it.keyOverride,
   }));
 

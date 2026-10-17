@@ -29,6 +29,7 @@ export default async function SetlistStagePage({
     title: it.song.title,
     artist: it.song.artist,
     originalKey: it.song.originalKey,
+    currentKey: it.song.currentKey,
     keyOverride: it.keyOverride,
     contentChordpro: it.song.contentChordpro,
     notes: it.itemNotes || it.song.notes,

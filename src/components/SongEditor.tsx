@@ -6,7 +6,7 @@ import { SongBody } from "@/components/SongViewer";
 import { KEYS, convertChordsOverLyrics, diatonicChords } from "@/lib/chordpro";
 
 type Song = {
-  id?: number; title?: string; artist?: string | null; originalKey?: string | null;
+  id?: number; title?: string; artist?: string | null; originalKey?: string | null; currentKey?: string | null;
   tempo?: number | null; contentChordpro?: string; notes?: string | null;
 };
 
@@ -24,7 +24,8 @@ export default function SongEditor({ song }: { song?: Song }) {
   const [title, setTitle] = useState(song?.title ?? "");
   const [artist, setArtist] = useState(song?.artist ?? "");
   const [content, setContent] = useState(song?.contentChordpro ?? "");
-  const [key, setKey] = useState(song?.originalKey ?? "");
+  const [origKey, setOrigKey] = useState(song?.originalKey ?? "");
+  const [currKey, setCurrKey] = useState(song?.currentKey || song?.originalKey || "");
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
@@ -40,7 +41,10 @@ export default function SongEditor({ song }: { song?: Song }) {
       if (res.ok && res.song) {
         setTitle(res.song.title);
         setArtist(res.song.artist);
-        if (res.song.originalKey) setKey(res.song.originalKey);
+        if (res.song.originalKey) {
+          setOrigKey(res.song.originalKey);
+          setCurrKey(res.song.originalKey);
+        }
         setContent(res.song.contentChordpro);
         setImportUrl("");
       } else {
@@ -72,7 +76,7 @@ export default function SongEditor({ song }: { song?: Song }) {
     insert(`[${sel}]`, sel ? sel.length + 2 : 1);
   };
 
-  const chords = diatonicChords(key || null);
+  const chords = diatonicChords(currKey || origKey || null);
 
   return (
     <form action={action} className="stack">
@@ -135,8 +139,35 @@ export default function SongEditor({ song }: { song?: Song }) {
             />
           </div>
           <div className="field">
-            <label htmlFor="originalKey">Tono original</label>
-            <select id="originalKey" name="originalKey" className="input" value={key} onChange={(e) => setKey(e.target.value)}>
+            <label htmlFor="currentKey">Tono actual (de uso)</label>
+            <select
+              id="currentKey"
+              name="currentKey"
+              className="input"
+              value={currKey}
+              onChange={(e) => {
+                setCurrKey(e.target.value);
+                if (!origKey) setOrigKey(e.target.value);
+              }}
+            >
+              <option value="">— sin definir —</option>
+              {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="originalKey">
+              Tono original {origKey && currKey && origKey !== currKey ? `(Original: ${origKey})` : ""}
+            </label>
+            <select
+              id="originalKey"
+              name="originalKey"
+              className="input"
+              value={origKey}
+              onChange={(e) => {
+                setOrigKey(e.target.value);
+                if (!currKey) setCurrKey(e.target.value);
+              }}
+            >
               <option value="">— sin definir —</option>
               {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
             </select>

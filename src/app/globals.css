@@ -104,7 +104,7 @@ h2 { font-size: 1.15rem; font-weight: 600; }
   position: relative; isolation: isolate; overflow: hidden;
   background: #0b0c1c url("/login-bg.jpg") center / cover no-repeat;
 }
-/* viñeta para que el centro respire y el formulario destaque */
+/* viÃ±eta para que el centro respire y el formulario destaque */
 .auth-wrap::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   background: radial-gradient(ellipse 55% 60% at 50% 50%, rgba(11, 12, 28, 0.78), rgba(11, 12, 28, 0.2) 100%);
@@ -128,7 +128,7 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 }
 @keyframes drift { from { background-position: 45% 50%; } to { background-position: 55% 52%; } }
 
-/* ---------- App shell: móvil = barra inferior, tablet = barra lateral ---------- */
+/* ---------- App shell: mÃ³vil = barra inferior, tablet = barra lateral ---------- */
 .shell { min-height: 100dvh; }
 .main { padding: 1.25rem 1rem calc(var(--nav-h) + 1.5rem); max-width: 1100px; margin: 0 auto; }
 .nav {
@@ -180,15 +180,31 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; justify-content: space-between; position: sticky; top: 0.5rem; z-index: 5; padding: 0.75rem 1rem; }
 .key-badge { display: inline-block; min-width: 3ch; text-align: center; font-size: 1.2rem; color: var(--accent); }
 
-.song { font-family: var(--font-sans), sans-serif; line-height: 1.25; }
-.song-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.5em; }
+.song { font-family: var(--font-sans), sans-serif; line-height: 1.2; }
+.song.two-cols {
+  column-count: 2;
+  column-gap: 2.5rem;
+}
+.song.two-cols .song-line,
+.song.two-cols .song-comment,
+.song.two-cols .song-gap {
+  break-inside: avoid;
+}
+@media (max-width: 640px) {
+  .song.two-cols { column-count: 1; }
+}
+
+.song-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.22em; }
 .song-line.chorus { border-left: 3px solid var(--primary); padding-left: 0.75em; background: rgba(139, 123, 255, 0.07); border-radius: 0 8px 8px 0; }
+.song-line.chord-only { margin-bottom: 0.05em; }
+.song-line.chord-only .chord { min-height: auto; }
 .seg { display: inline-flex; flex-direction: column; }
-.chord { font-weight: 700; color: var(--accent); font-size: 0.85em; padding-right: 0.4em; min-height: 1.25em; }
+.chord { font-weight: 700; color: var(--accent); font-size: 0.85em; padding-right: 0.35em; min-height: 1.15em; line-height: 1.1; }
 .chord.raw { color: var(--muted); font-weight: 400; }
 .lyr { white-space: pre-wrap; }
-.song-comment { margin: 0.9em 0 0.4em; font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
-.song-gap { height: 0.8em; }
+.chord-spacer { height: 0; line-height: 0; display: inline-block; white-space: pre; }
+.song-comment { margin: 0.55em 0 0.2em; font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
+.song-gap { height: 0.45em; }
 
 .editor { min-height: 320px; padding: 0.9rem 1rem; font-family: var(--font-geist-mono), ui-monospace, Consolas, monospace; font-size: 0.95rem; line-height: 1.5; resize: vertical; }
 .editor-split { display: grid; gap: 1rem; grid-template-columns: 1fr; }
@@ -207,7 +223,7 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 .chip-bar { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none; }
 .chip { flex: none; min-height: 40px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255, 200, 107, 0.12); color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; transition: transform 0.12s, background 0.2s; }
 .chip.alt { background: var(--surface-2); color: var(--text); font-weight: 500; }
-.chip:active { transform: scale(0.93); }
+.chip:active { transform: scale(0.93); }
 
 /* ---------- Listas & Drag and Drop ---------- */
 .sl-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -283,9 +299,9 @@ h2 { font-size: 1.15rem; font-weight: 600; }
   border: 1px solid var(--border); border-radius: 10px; padding: 0 0.8rem; font-size: 0.9rem;
 }
 
-.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---------- Estilos de Impresi�n y Exportaci�n a PDF ---------- */
+/* ---------- Estilos de Impresión y Exportación a PDF ---------- */
 @media print {
   body {
     background: #ffffff !important;
@@ -316,4 +332,4 @@ h2 { font-size: 1.15rem; font-weight: 600; }
     page-break-after: always;
     break-after: page;
   }
-}
+}

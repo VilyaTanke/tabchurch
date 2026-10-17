@@ -25,14 +25,9 @@ export const viewport: Viewport = {
 
 import PwaManager from "@/components/PwaManager";
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={outfit.variable}>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      </head>
       <body>
         <PwaManager />
         {children}
