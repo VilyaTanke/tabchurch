@@ -46,3 +46,14 @@ export async function deleteSong(form: FormData) {
   revalidatePath("/canciones");
   redirect("/canciones");
 }
+
+export async function importSongFromUrl(url: string) {
+  await requireUser();
+  const { scrapeSongFromUrl } = await import("@/lib/scraper");
+  try {
+    const data = await scrapeSongFromUrl(url);
+    return { ok: true, song: data };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al importar el cifrado" };
+  }
+}
