@@ -8,11 +8,35 @@ import { requireUser } from "@/lib/auth";
 import { getSetlistFor } from "@/lib/setlists";
 import type { FormState } from "@/app/actions";
 
-async function owned(setlistId: number) {
+async function canModify(setlistId: number) {
   const user = await requireUser();
   const list = getSetlistFor(user.id, setlistId);
   if (!list) throw new Error("Lista no encontrada");
-  return { user, list };
+
+  // Si es el creador de la lista o admin
+  if (list.ownerId === user.id || user.role === "admin") {
+    return { user, list };
+  }
+
+  // Si la lista es de un grupo, revisar si el usuario es owner o editor del grupo
+  if (list.groupId) {
+    const role = db
+      .select({ role: schema.groupMembers.role })
+      .from(schema.groupMembers)
+      .where(
+        and(
+          eq(schema.groupMembers.groupId, list.groupId),
+          eq(schema.groupMembers.userId, user.id)
+        )
+      )
+      .get()?.role;
+
+    if (role === "owner" || role === "editor") {
+      return { user, list };
+    }
+  }
+
+  throw new Error("No tienes permiso para editar esta lista");
 }
 
 export async function createSetlist(_: FormState, form: FormData): Promise<FormState> {
@@ -20,9 +44,12 @@ export async function createSetlist(_: FormState, form: FormData): Promise<FormS
   const name = String(form.get("name") ?? "").trim();
   if (!name) return { error: "Ponle un nombre a la lista" };
   const eventDate = String(form.get("eventDate") ?? "") || null;
+  const groupIdRaw = form.get("groupId");
+  const groupId = groupIdRaw ? Number(groupIdRaw) : null;
+
   const row = db
     .insert(schema.setlists)
-    .values({ ownerId: user.id, name, eventDate })
+    .values({ ownerId: user.id, groupId, name, eventDate })
     .returning({ id: schema.setlists.id })
     .get();
   revalidatePath("/listas");
@@ -31,7 +58,7 @@ export async function createSetlist(_: FormState, form: FormData): Promise<FormS
 
 export async function updateSetlist(form: FormData) {
   const id = Number(form.get("id"));
-  await owned(id);
+  await canModify(id);
   const name = String(form.get("name") ?? "").trim();
   if (!name) return;
   db.update(schema.setlists)
@@ -47,18 +74,18 @@ export async function updateSetlist(form: FormData) {
 
 export async function deleteSetlist(form: FormData) {
   const id = Number(form.get("id"));
-  await owned(id);
+  await canModify(id);
   db.delete(schema.setlists).where(eq(schema.setlists.id, id)).run();
   revalidatePath("/listas");
   redirect("/listas");
 }
 
 export async function addSongToSetlist(setlistId: number, songId: number) {
-  const { user } = await owned(setlistId);
+  const { user } = await canModify(setlistId);
   const song = db
     .select()
     .from(schema.songs)
-    .where(and(eq(schema.songs.id, songId), eq(schema.songs.ownerId, user.id)))
+    .where(eq(schema.songs.id, songId))
     .get();
   if (!song) return null;
   const last = db
@@ -76,7 +103,7 @@ export async function addSongToSetlist(setlistId: number, songId: number) {
 }
 
 export async function removeSetlistItem(setlistId: number, itemId: number) {
-  await owned(setlistId);
+  await canModify(setlistId);
   db.delete(schema.setlistItems)
     .where(and(eq(schema.setlistItems.id, itemId), eq(schema.setlistItems.setlistId, setlistId)))
     .run();
@@ -84,7 +111,7 @@ export async function removeSetlistItem(setlistId: number, itemId: number) {
 }
 
 export async function reorderSetlist(setlistId: number, orderedItemIds: number[]) {
-  await owned(setlistId);
+  await canModify(setlistId);
   db.transaction((tx) => {
     orderedItemIds.forEach((itemId, position) => {
       tx.update(schema.setlistItems)
@@ -97,7 +124,7 @@ export async function reorderSetlist(setlistId: number, orderedItemIds: number[]
 }
 
 export async function setItemKey(setlistId: number, itemId: number, key: string | null) {
-  await owned(setlistId);
+  await canModify(setlistId);
   db.update(schema.setlistItems)
     .set({ keyOverride: key || null })
     .where(and(eq(schema.setlistItems.id, itemId), eq(schema.setlistItems.setlistId, setlistId)))
