@@ -12,9 +12,14 @@ export default async function EditSongPage({ params }: { params: Promise<{ id: s
   const song = db
     .select()
     .from(schema.songs)
-    .where(and(eq(schema.songs.id, Number(id)), eq(schema.songs.ownerId, user.id)))
+    .where(eq(schema.songs.id, Number(id)))
     .get();
   if (!song) notFound();
+
+  // Solo el creador o un admin pueden editar la canción maestra
+  if (song.ownerId !== user.id && user.role !== "admin") {
+    notFound();
+  }
   return (
     <div className="stack">
       <h1>Editar canción</h1>

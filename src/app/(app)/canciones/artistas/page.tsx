@@ -11,14 +11,13 @@ export default async function ArtistsPage({
   const user = await requireUser();
   const { q = "", artist = "" } = await searchParams;
 
-  // 1. Obtener lista de todos los artistas con conteo de canciones para este usuario
+  // 1. Obtener lista de todos los artistas con conteo de canciones globales
   const artistsSummary = db
     .select({
       artist: sql<string>`coalesce(nullif(trim(${schema.songs.artist}), ''), 'Sin artista')`,
       count: sql<number>`count(*)`,
     })
     .from(schema.songs)
-    .where(eq(schema.songs.ownerId, user.id))
     .groupBy(sql`coalesce(nullif(trim(${schema.songs.artist}), ''), 'Sin artista')`)
     .orderBy(asc(sql`coalesce(nullif(trim(${schema.songs.artist}), ''), 'Sin artista')`))
     .all();
@@ -37,11 +36,8 @@ export default async function ArtistsPage({
       .from(schema.songs)
       .where(
         isSinArtista
-          ? or(
-              eq(schema.songs.ownerId, user.id),
-              sql`${schema.songs.artist} IS NULL OR trim(${schema.songs.artist}) = ''`
-            )
-          : sql`${schema.songs.ownerId} = ${user.id} AND LOWER(trim(${schema.songs.artist})) = LOWER(trim(${artist}))`
+          ? sql`${schema.songs.artist} IS NULL OR trim(${schema.songs.artist}) = ''`
+          : sql`LOWER(trim(${schema.songs.artist})) = LOWER(trim(${artist}))`
       )
       .orderBy(asc(schema.songs.title))
       .all();

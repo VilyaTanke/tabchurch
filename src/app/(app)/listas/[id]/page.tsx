@@ -27,7 +27,6 @@ export default async function SetlistDetailPage({
       artist: schema.songs.artist,
     })
     .from(schema.songs)
-    .where(eq(schema.songs.ownerId, user.id))
     .orderBy(asc(schema.songs.title))
     .all();
 

@@ -27,12 +27,21 @@ export async function saveSong(_: FormState, form: FormData): Promise<FormState>
 
   let songId = id;
   if (id) {
-    const res = db
-      .update(schema.songs)
+    const existing = db
+      .select({ id: schema.songs.id, ownerId: schema.songs.ownerId })
+      .from(schema.songs)
+      .where(eq(schema.songs.id, id))
+      .get();
+
+    if (!existing) return { error: "No se encontró la canción" };
+    if (existing.ownerId !== user.id && user.role !== "admin") {
+      return { error: "Solo el creador o un administrador pueden editar esta canción" };
+    }
+
+    db.update(schema.songs)
       .set({ ...values, updatedAt: Math.floor(Date.now() / 1000) })
-      .where(and(eq(schema.songs.id, id), eq(schema.songs.ownerId, user.id)))
+      .where(eq(schema.songs.id, id))
       .run();
-    if (!res.changes) return { error: "No se encontró la canción" };
   } else {
     songId = Number(
       db.insert(schema.songs).values({ ...values, ownerId: user.id }).returning({ id: schema.songs.id }).get().id,
@@ -45,9 +54,9 @@ export async function saveSong(_: FormState, form: FormData): Promise<FormState>
 export async function updateSongKey(songId: number, newKey: string): Promise<{ ok: boolean; error?: string }> {
   const user = await requireUser();
   const song = db
-    .select({ id: schema.songs.id, originalKey: schema.songs.originalKey })
+    .select({ id: schema.songs.id, ownerId: schema.songs.ownerId, originalKey: schema.songs.originalKey })
     .from(schema.songs)
-    .where(and(eq(schema.songs.id, songId), eq(schema.songs.ownerId, user.id)))
+    .where(eq(schema.songs.id, songId))
     .get();
 
   if (!song) return { ok: false, error: "No se encontró la canción" };
@@ -72,7 +81,14 @@ export async function updateSongKey(songId: number, newKey: string): Promise<{ o
 export async function deleteSong(form: FormData) {
   const user = await requireUser();
   const id = Number(form.get("id"));
-  db.delete(schema.songs).where(and(eq(schema.songs.id, id), eq(schema.songs.ownerId, user.id))).run();
+  const song = db.select({ ownerId: schema.songs.ownerId }).from(schema.songs).where(eq(schema.songs.id, id)).get();
+  if (!song) return;
+
+  if (song.ownerId !== user.id && user.role !== "admin") {
+    return;
+  }
+
+  db.delete(schema.songs).where(eq(schema.songs.id, id)).run();
   revalidatePath("/canciones");
   redirect("/canciones");
 }

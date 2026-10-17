@@ -13,9 +13,11 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
   const song = db
     .select()
     .from(schema.songs)
-    .where(and(eq(schema.songs.id, Number(id)), eq(schema.songs.ownerId, user.id)))
+    .where(eq(schema.songs.id, Number(id)))
     .get();
   if (!song) notFound();
+
+  const canEditOrDelete = song.ownerId === user.id || user.role === "admin";
 
   const activeKey = song.currentKey || song.originalKey;
   const hasDiffKey = Boolean(song.originalKey && song.currentKey && song.originalKey !== song.currentKey);
@@ -58,12 +60,20 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
         currentKey={song.currentKey}
       />
       <div className="row">
-        <Link href={`/canciones/${song.id}/editar`} className="btn ghost">Editar</Link>
+        {canEditOrDelete && (
+          <Link href={`/canciones/${song.id}/editar`} className="btn ghost">
+            Editar
+          </Link>
+        )}
         <PrintButton />
-        <form action={deleteSong}>
-          <input type="hidden" name="id" value={song.id} />
-          <button className="btn danger" formNoValidate>Eliminar</button>
-        </form>
+        {canEditOrDelete && (
+          <form action={deleteSong}>
+            <input type="hidden" name="id" value={song.id} />
+            <button className="btn danger" formNoValidate>
+              Eliminar
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

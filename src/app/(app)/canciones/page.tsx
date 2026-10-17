@@ -17,11 +17,8 @@ export default async function SongsPage({
 
   const term = `%${q.trim().replace(/[%_]/g, "")}%`;
   const whereClause = q.trim()
-    ? and(
-        eq(schema.songs.ownerId, user.id),
-        or(like(schema.songs.title, term), like(schema.songs.artist, term)),
-      )
-    : eq(schema.songs.ownerId, user.id);
+    ? or(like(schema.songs.title, term), like(schema.songs.artist, term))
+    : undefined;
 
   const totalCountResult = db
     .select({ count: sql<number>`count(*)` })
