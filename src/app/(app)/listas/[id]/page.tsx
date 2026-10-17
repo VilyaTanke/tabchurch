@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { deleteSetlist, updateSetlist } from "@/app/setlists-actions";
 import SetlistEditor from "@/components/SetlistEditor";
+import PrintButton from "@/components/PrintButton";
 import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
 
 export default async function SetlistDetailPage({
@@ -60,16 +61,19 @@ export default async function SetlistDetailPage({
         </div>
         <div className="row">
           {items.length > 0 && (
-            <Link
-              href={`/listas/${list.id}/escenario`}
-              className="btn"
-              style={{
-                background: "linear-gradient(135deg, #10b981, #06b6d4)",
-                boxShadow: "0 8px 24px -8px rgba(16, 185, 129, 0.7)",
-              }}
-            >
-              🎤 Modo Escenario
-            </Link>
+            <>
+              <Link
+                href={`/listas/${list.id}/escenario`}
+                className="btn"
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #06b6d4)",
+                  boxShadow: "0 8px 24px -8px rgba(16, 185, 129, 0.7)",
+                }}
+              >
+                🎤 Modo Escenario
+              </Link>
+              <PrintButton label="🖨️ Imprimir Lista / PDF" />
+            </>
           )}
           <form action={deleteSetlist}>
             <input type="hidden" name="id" value={list.id} />

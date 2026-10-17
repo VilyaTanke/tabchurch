@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { deleteSong } from "@/app/songs-actions";
 import SongViewer from "@/components/SongViewer";
+import PrintButton from "@/components/PrintButton";
 
 export default async function SongPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -30,6 +31,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
       <SongViewer content={song.contentChordpro} originalKey={song.originalKey} />
       <div className="row">
         <Link href={`/canciones/${song.id}/editar`} className="btn ghost">Editar</Link>
+        <PrintButton />
         <form action={deleteSong}>
           <input type="hidden" name="id" value={song.id} />
           <button className="btn danger" formNoValidate>Eliminar</button>

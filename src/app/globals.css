@@ -284,3 +284,36 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 }
 
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Estilos de Impresión y Exportación a PDF ---------- */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .nav, .stage-bar, .stage-footer, .btn, .toolbar, .chip-bar, form {
+    display: none !important;
+  }
+  .main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .chord {
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+  .song-comment {
+    color: #444444 !important;
+  }
+  .print-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+}
