@@ -49,6 +49,7 @@ jobs:
             npm ci
 
             echo "Compilando aplicación..."
+            export NODE_OPTIONS="--max-old-space-size=2048"
             npm run build
 
             echo "Reiniciando / recargando proceso con PM2..."
