@@ -47,6 +47,7 @@ jobs:
 
             echo "Instalando dependencias..."
             npm ci
+            npm rebuild better-sqlite3
 
             echo "Compilando aplicación..."
             export NODE_OPTIONS="--max-old-space-size=2048"
