@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:export": "node scripts/export-db.cjs",
+    "db:seed": "node scripts/import-seed.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

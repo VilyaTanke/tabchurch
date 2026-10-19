@@ -41,6 +41,12 @@ jobs:
             # Asegurar persistencia del directorio de base de datos SQLite
             mkdir -p data
 
+            # Si la base de datos aún no existe en el servidor, cargar los datos iniciales
+            if [ ! -f "data/tabchurch.db" ]; then
+              echo "Cargando canciones y datos iniciales en el servidor..."
+              node scripts/import-seed.cjs || true
+            fi
+
             # Cargar entorno de Node.js (soporte para nvm y paths estándar)
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
