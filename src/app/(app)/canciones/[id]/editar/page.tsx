@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import { requireSongEditor } from "@/lib/auth";
 import SongEditor from "@/components/SongEditor";
 
-export const metadata = { title: "Editar canción · TabChurch" };
+export const metadata = { title: "Editar canción · Tab-NuevaVida" };
 
 export default async function EditSongPage({ params }: { params: Promise<{ id: string }> }) {
   await requireSongEditor();

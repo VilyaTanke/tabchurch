@@ -6,7 +6,7 @@ import { createUser } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 import UserRow from "@/components/UserRow";
 
-export const metadata = { title: "Administración · TabChurch" };
+export const metadata = { title: "Administración · Tab-NuevaVida" };
 
 export default async function AdminPage() {
   const me = await requireAdmin();

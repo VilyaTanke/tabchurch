@@ -7,7 +7,7 @@ import { createSetlist } from "@/app/setlists-actions";
 import { getUserGroups } from "@/lib/groups";
 import ActionForm, { Field } from "@/components/ActionForm";
 
-export const metadata = { title: "Listas · TabChurch" };
+export const metadata = { title: "Listas · Tab-NuevaVida" };
 
 export default async function SetlistsPage() {
   const user = await requireUser();

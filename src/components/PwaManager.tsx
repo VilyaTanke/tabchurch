@@ -12,7 +12,7 @@ export default function PwaManager() {
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => {
-          console.log("Service Worker de TabChurch registrado con éxito:", reg.scope);
+          console.log("Service Worker de Tab-NuevaVida registrado con éxito:", reg.scope);
         })
         .catch((err) => {
           console.warn("Fallo al registrar Service Worker:", err);

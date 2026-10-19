@@ -5,7 +5,7 @@ import { getUserGroups } from "@/lib/groups";
 import { createGroup } from "@/app/groups-actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 
-export const metadata = { title: "Grupos · TabChurch" };
+export const metadata = { title: "Grupos · Tab-NuevaVida" };
 
 export default async function GroupsPage() {
   const user = await requireUser();

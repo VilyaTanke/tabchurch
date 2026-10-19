@@ -12,7 +12,7 @@ import {
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
 
-export const metadata = { title: "Canciones · TabChurch" };
+export const metadata = { title: "Canciones · Tab-NuevaVida" };
 
 const PAGE_SIZE = 20;
 

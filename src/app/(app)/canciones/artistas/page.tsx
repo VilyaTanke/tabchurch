@@ -11,7 +11,7 @@ import {
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 
-export const metadata = { title: "Artistas · TabChurch" };
+export const metadata = { title: "Artistas · Tab-NuevaVida" };
 
 export default async function ArtistsPage({
   searchParams,

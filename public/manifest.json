@@ -1,6 +1,6 @@
 {
-  "name": "TabChurch · Cifrados para Alabanza",
-  "short_name": "TabChurch",
+  "name": "Tab-NuevaVida · Cifrados para Alabanza",
+  "short_name": "Tab-NuevaVida",
   "description": "App para almacenar cifrados de canciones, listas de alabanza y acordes en grupo.",
   "start_url": "/",
   "display": "standalone",

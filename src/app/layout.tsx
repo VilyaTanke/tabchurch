@@ -5,13 +5,13 @@ import "./globals.css";
 const outfit = Outfit({ variable: "--font-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TabChurch · Cifrados para tu grupo",
+  title: "Tab-NuevaVida · Cifrados para tu grupo",
   description: "Guarda cifrados de canciones, organiza listas y compártelas con tu grupo de alabanza.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TabChurch",
+    title: "Tab-NuevaVida",
   },
 };
 

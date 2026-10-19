@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
 import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, type LucideIcon } from "lucide-react";
@@ -34,7 +35,7 @@ export default function Nav({ isAdmin }: { isAdmin: boolean }) {
     if (!nav || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (first.current) {
       first.current = false;
-      animate(nav.querySelectorAll(".nav-link, .brand"), {
+      animate(nav.querySelectorAll(".nav-link, .brand-link"), {
         opacity: [0, 1],
         translateY: [14, 0],
         delay: stagger(60, { start: 150 }),
@@ -55,7 +56,16 @@ export default function Nav({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <nav className="nav" aria-label="Principal" ref={ref}>
-      <span className="brand">TabChurch</span>
+      <Link href="/" className="brand-link" aria-label="Tab-NuevaVida - Inicio">
+        <Image
+          src="/logo.png"
+          alt="Tab-NuevaVida"
+          width={188}
+          height={46}
+          priority
+          className="brand-img"
+        />
+      </Link>
       {all.map((l) => {
         const Icon = l.icon;
         return (

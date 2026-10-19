@@ -4,7 +4,7 @@ import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
 import StageMode from "@/components/StageMode";
 
 export const metadata = {
-  title: "Modo Escenario · TabChurch",
+  title: "Modo Escenario · Tab-NuevaVida",
 };
 
 export default async function SetlistStagePage({
