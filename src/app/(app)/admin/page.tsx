@@ -1,9 +1,10 @@
 import { asc } from "drizzle-orm";
-import { ShieldCheck, UserPlus, KeyRound, UserCheck, UserX } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
-import { createUser, resetPassword, toggleUserActive } from "@/app/actions";
+import { createUser } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
+import UserRow from "@/components/UserRow";
 
 export const metadata = { title: "Administración · TabChurch" };
 
@@ -42,57 +43,7 @@ export default async function AdminPage() {
       <section className="card">
         <h2>Usuarios ({users.length})</h2>
         {users.map((u) => (
-          <div key={u.id} className="user-row">
-            <div>
-              <strong>{u.name}</strong> <span className="muted">@{u.username}</span>{" "}
-              {u.role === "admin" && (
-                <span
-                  className="badge admin"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
-                >
-                  <ShieldCheck size={12} />
-                  <span>admin</span>
-                </span>
-              )}{" "}
-              {!u.active && <span className="badge off">desactivado</span>}
-              {u.email && <div className="muted" style={{ fontSize: "0.85rem" }}>{u.email}</div>}
-            </div>
-            <div className="row">
-              <form action={resetPassword} className="row">
-                <input type="hidden" name="id" value={u.id} />
-                <input name="password" className="input" style={{ width: 150, minHeight: 38 }}
-                  placeholder="Nueva clave" minLength={8} required />
-                <button
-                  className="btn ghost small"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                >
-                  <KeyRound size={13} />
-                  <span>Restablecer</span>
-                </button>
-              </form>
-              {u.id !== me.id && (
-                <form action={toggleUserActive}>
-                  <input type="hidden" name="id" value={u.id} />
-                  <button
-                    className={`btn small ${u.active ? "danger" : "ghost"}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                  >
-                    {u.active ? (
-                      <>
-                        <UserX size={13} />
-                        <span>Desactivar</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck size={13} />
-                        <span>Activar</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
+          <UserRow key={u.id} user={u} currentUserId={me.id} />
         ))}
       </section>
     </div>

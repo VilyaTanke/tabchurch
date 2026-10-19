@@ -1,7 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { createSession, destroySession, requireAdmin, requireUser } from "@/lib/auth";
@@ -80,4 +80,49 @@ export async function resetPassword(form: FormData) {
     .run();
   db.delete(schema.sessions).where(eq(schema.sessions.userId, id)).run();
   revalidatePath("/admin");
+}
+
+export async function updateUser(_: FormState, form: FormData): Promise<FormState> {
+  const admin = await requireAdmin();
+  const id = Number(form.get("id"));
+  const name = String(form.get("name") ?? "").trim();
+  const username = String(form.get("username") ?? "").trim().toLowerCase();
+  const email = String(form.get("email") ?? "").trim() || null;
+  if (!id || isNaN(id)) return { error: "ID de usuario inválido" };
+  if (!name || !username) return { error: "Nombre y usuario son obligatorios" };
+  if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+    return { error: "Usuario: 3-30 caracteres (letras, números, . _ -)" };
+  }
+
+  const existing = db.select().from(schema.users).where(eq(schema.users.id, id)).get();
+  if (!existing) return { error: "Usuario no encontrado" };
+
+  const roleInput = form.get("role");
+  const role = roleInput ? (roleInput === "admin" ? "admin" : "user") : existing.role;
+
+  if (id === admin.id && role !== "admin") {
+    return { error: "No puedes quitarte el rol de administrador a ti mismo" };
+  }
+
+  const duplicate = db
+    .select()
+    .from(schema.users)
+    .where(and(eq(schema.users.username, username), ne(schema.users.id, id)))
+    .get();
+  if (duplicate) {
+    return { error: "Ese nombre de usuario ya está registrado por otra cuenta" };
+  }
+
+  db.update(schema.users)
+    .set({
+      name,
+      username,
+      email,
+      role,
+    })
+    .where(eq(schema.users.id, id))
+    .run();
+
+  revalidatePath("/admin");
+  return { ok: `Usuario «${username}» actualizado correctamente.` };
 }
