@@ -95,8 +95,42 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   border: 1px solid var(--border);
 }
 .badge.admin { background: rgba(180, 83, 9, 0.12); color: var(--accent); border-color: rgba(180, 83, 9, 0.25); }
-.badge.editor { background: rgba(37, 99, 235, 0.12); color: #2563eb; border-color: rgba(37, 99, 235, 0.25); }
 .badge.off { background: rgba(225, 29, 72, 0.1); color: var(--danger); border-color: rgba(225, 29, 72, 0.25); }
+
+/* Badges de rol compactos con iconos */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  max-height: 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
+}
+.role-badge:hover {
+  transform: scale(1.15);
+}
+.role-badge.role-admin {
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.role-badge.role-editor {
+  background: rgba(37, 99, 235, 0.14);
+  color: #2563eb;
+  border-color: rgba(37, 99, 235, 0.35);
+}
+.role-badge.role-user {
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+  border-color: rgba(100, 116, 139, 0.28);
+}
 
 .brand {
   font-weight: 800; font-size: 1.3rem; letter-spacing: -0.03em;

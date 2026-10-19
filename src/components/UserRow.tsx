@@ -9,6 +9,7 @@ import {
   Pencil,
   Check,
   X,
+  User,
 } from "lucide-react";
 import { resetPassword, toggleUserActive, updateUser } from "@/app/actions";
 
@@ -204,28 +205,39 @@ export default function UserRow({ user, currentUserId }: Props) {
   return (
     <div className="user-row">
       <div>
-        <strong>{user.name}</strong> <span className="muted">@{user.username}</span>{" "}
-        {user.role === "admin" && (
-          <span
-            className="badge admin"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
-          >
-            <ShieldCheck size={12} />
-            <span>admin</span>
-          </span>
-        )}
-        {user.role === "editor" && (
-          <span
-            className="badge editor"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
-          >
-            <Pencil size={12} />
-            <span>editor</span>
-          </span>
-        )}{" "}
-        {!user.active && <span className="badge off">desactivado</span>}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+          <strong>{user.name}</strong> <span className="muted">@{user.username}</span>
+          {user.role === "admin" && (
+            <span
+              className="role-badge role-admin"
+              title="Administrador"
+              aria-label="Administrador"
+            >
+              <ShieldCheck size={12} strokeWidth={2.4} />
+            </span>
+          )}
+          {user.role === "editor" && (
+            <span
+              className="role-badge role-editor"
+              title="Editor"
+              aria-label="Editor"
+            >
+              <Pencil size={11} strokeWidth={2.4} />
+            </span>
+          )}
+          {user.role === "user" && (
+            <span
+              className="role-badge role-user"
+              title="Usuario"
+              aria-label="Usuario"
+            >
+              <User size={11} strokeWidth={2.4} />
+            </span>
+          )}
+          {!user.active && <span className="badge off">desactivado</span>}
+        </div>
         {user.email && (
-          <div className="muted" style={{ fontSize: "0.85rem" }}>
+          <div className="muted" style={{ fontSize: "0.85rem", marginTop: "0.15rem" }}>
             {user.email}
           </div>
         )}
