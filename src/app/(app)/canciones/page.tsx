@@ -10,7 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { db, schema } from "@/db";
-import { requireUser } from "@/lib/auth";
+import { canManageSongs, requireUser } from "@/lib/auth";
 
 export const metadata = { title: "Canciones · TabChurch" };
 
@@ -65,14 +65,16 @@ export default async function SongsPage({
             {totalPages > 1 ? ` · Página ${currentPage} de ${totalPages}` : ""}
           </p>
         </div>
-        <Link
-          href="/canciones/nueva"
-          className="btn"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-        >
-          <Plus size={16} />
-          <span>Nueva</span>
-        </Link>
+        {canManageSongs(user) && (
+          <Link
+            href="/canciones/nueva"
+            className="btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Plus size={16} />
+            <span>Nueva</span>
+          </Link>
+        )}
       </div>
 
       {/* Pestañas de Vista */}

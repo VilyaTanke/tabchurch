@@ -9,7 +9,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { db, schema } from "@/db";
-import { requireUser } from "@/lib/auth";
+import { canManageSongs, requireUser } from "@/lib/auth";
 import { getUserGroups } from "@/lib/groups";
 
 export default async function Home() {
@@ -47,14 +47,16 @@ export default async function Home() {
           <p className="muted">Panel principal de alabanza y acordes.</p>
         </div>
         <div className="row">
-          <Link
-            href="/canciones/nueva"
-            className="btn small"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-          >
-            <Plus size={15} />
-            <span>Nueva Canción</span>
-          </Link>
+          {canManageSongs(user) && (
+            <Link
+              href="/canciones/nueva"
+              className="btn small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <Plus size={15} />
+              <span>Nueva Canción</span>
+            </Link>
+          )}
           <Link
             href="/listas"
             className="btn small ghost"

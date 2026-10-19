@@ -150,6 +150,7 @@ export default function UserRow({ user, currentUserId }: Props) {
                   defaultValue={user.role}
                 >
                   <option value="user">Usuario</option>
+                  <option value="editor">Editor</option>
                   <option value="admin">Administrador</option>
                 </select>
               )}
@@ -211,6 +212,15 @@ export default function UserRow({ user, currentUserId }: Props) {
           >
             <ShieldCheck size={12} />
             <span>admin</span>
+          </span>
+        )}
+        {user.role === "editor" && (
+          <span
+            className="badge editor"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+          >
+            <Pencil size={12} />
+            <span>editor</span>
           </span>
         )}{" "}
         {!user.active && <span className="badge off">desactivado</span>}

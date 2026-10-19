@@ -77,11 +77,13 @@ export default function SongViewer({
   content,
   originalKey,
   currentKey: initialCurrentKey,
+  canSaveKey = false,
 }: {
   songId?: number;
   content: string;
   originalKey: string | null;
   currentKey?: string | null;
+  canSaveKey?: boolean;
 }) {
   const savedKey = initialCurrentKey || originalKey;
 
@@ -203,7 +205,7 @@ export default function SongViewer({
         {/* Guardar tono / Restablecer original */}
         {originalKey && (
           <div style={{ padding: "0 0.5rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-            {songId && isDifferentFromSaved && activeKey && (
+            {songId && canSaveKey && isDifferentFromSaved && activeKey && (
               <button
                 className="btn small"
                 onClick={handleSaveKey}

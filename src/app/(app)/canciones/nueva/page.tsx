@@ -1,10 +1,10 @@
 import SongEditor from "@/components/SongEditor";
-import { requireUser } from "@/lib/auth";
+import { requireSongEditor } from "@/lib/auth";
 
 export const metadata = { title: "Nueva canción · TabChurch" };
 
 export default async function NewSongPage() {
-  await requireUser();
+  await requireSongEditor();
   return (
     <div className="stack">
       <h1>Nueva canción</h1>

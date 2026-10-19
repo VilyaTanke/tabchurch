@@ -9,7 +9,7 @@ export const users = sqliteTable("users", {
   email: text("email"),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
-  role: text("role", { enum: ["admin", "user"] }).notNull().default("user"),
+  role: text("role", { enum: ["admin", "editor", "user"] }).notNull().default("user"),
   mustChangePw: integer("must_change_pw", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at").notNull().default(now),

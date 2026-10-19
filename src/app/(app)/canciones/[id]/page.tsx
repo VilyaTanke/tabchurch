@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
-import { requireUser } from "@/lib/auth";
+import { canManageSongs, requireUser } from "@/lib/auth";
 import { deleteSong } from "@/app/songs-actions";
 import SongViewer from "@/components/SongViewer";
 import PrintButton from "@/components/PrintButton";
@@ -18,7 +18,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
     .get();
   if (!song) notFound();
 
-  const canEditOrDelete = song.ownerId === user.id || user.role === "admin";
+  const canEditOrDelete = canManageSongs(user);
 
   const activeKey = song.currentKey || song.originalKey;
   const hasDiffKey = Boolean(song.originalKey && song.currentKey && song.originalKey !== song.currentKey);
@@ -66,6 +66,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
         content={song.contentChordpro}
         originalKey={song.originalKey}
         currentKey={song.currentKey}
+        canSaveKey={canEditOrDelete}
       />
       <div className="row">
         {canEditOrDelete && (

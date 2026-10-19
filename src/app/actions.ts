@@ -44,7 +44,8 @@ export async function createUser(_: FormState, form: FormData): Promise<FormStat
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const email = String(form.get("email") ?? "").trim() || null;
   const password = String(form.get("password") ?? "");
-  const role = form.get("role") === "admin" ? "admin" : "user";
+  const roleInput = form.get("role");
+  const role = roleInput === "admin" ? "admin" : roleInput === "editor" ? "editor" : "user";
   if (!name || !username) return { error: "Nombre y usuario son obligatorios" };
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) return { error: "Usuario: 3-30 caracteres (letras, números, . _ -)" };
   if (password.length < 8) return { error: "La contraseña temporal debe tener al menos 8 caracteres" };
@@ -98,7 +99,13 @@ export async function updateUser(_: FormState, form: FormData): Promise<FormStat
   if (!existing) return { error: "Usuario no encontrado" };
 
   const roleInput = form.get("role");
-  const role = roleInput ? (roleInput === "admin" ? "admin" : "user") : existing.role;
+  const role = roleInput
+    ? roleInput === "admin"
+      ? "admin"
+      : roleInput === "editor"
+      ? "editor"
+      : "user"
+    : existing.role;
 
   if (id === admin.id && role !== "admin") {
     return { error: "No puedes quitarte el rol de administrador a ti mismo" };

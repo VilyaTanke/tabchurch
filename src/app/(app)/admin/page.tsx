@@ -33,8 +33,9 @@ export default async function AdminPage() {
           <div className="field">
             <label htmlFor="role">Rol</label>
             <select id="role" name="role" className="input" defaultValue="user">
-              <option value="user">Usuario</option>
-              <option value="admin">Administrador</option>
+              <option value="user">Usuario (solo lectura)</option>
+              <option value="editor">Editor (agregar y editar canciones)</option>
+              <option value="admin">Administrador (control total)</option>
             </select>
           </div>
         </ActionForm>

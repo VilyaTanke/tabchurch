@@ -53,3 +53,13 @@ export async function requireAdmin() {
   if (user.role !== "admin") redirect("/");
   return user;
 }
+
+export function canManageSongs(user: { role: string }) {
+  return user.role === "admin" || user.role === "editor";
+}
+
+export async function requireSongEditor() {
+  const user = await requireUser();
+  if (!canManageSongs(user)) redirect("/canciones");
+  return user;
+}
