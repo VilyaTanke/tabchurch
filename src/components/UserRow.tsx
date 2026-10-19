@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { resetPassword, toggleUserActive, updateUser } from "@/app/actions";
+import RoleBadge from "@/components/RoleBadge";
 
 export type AdminUser = {
   id: number;
@@ -207,33 +208,7 @@ export default function UserRow({ user, currentUserId }: Props) {
       <div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
           <strong>{user.name}</strong> <span className="muted">@{user.username}</span>
-          {user.role === "admin" && (
-            <span
-              className="role-badge role-admin"
-              title="Administrador"
-              aria-label="Administrador"
-            >
-              <ShieldCheck size={12} strokeWidth={2.4} />
-            </span>
-          )}
-          {user.role === "editor" && (
-            <span
-              className="role-badge role-editor"
-              title="Editor"
-              aria-label="Editor"
-            >
-              <Pencil size={11} strokeWidth={2.4} />
-            </span>
-          )}
-          {user.role === "user" && (
-            <span
-              className="role-badge role-user"
-              title="Usuario"
-              aria-label="Usuario"
-            >
-              <User size={11} strokeWidth={2.4} />
-            </span>
-          )}
+          <RoleBadge role={user.role} />
           {!user.active && <span className="badge off">desactivado</span>}
         </div>
         {user.email && (

@@ -11,6 +11,7 @@ import {
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
 import { getUserGroups } from "@/lib/groups";
+import RoleBadge from "@/components/RoleBadge";
 
 export default async function Home() {
   const user = await requireUser();
@@ -43,7 +44,10 @@ export default async function Home() {
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <h1>Hola, {user.name}</h1>
+          <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+            <span>Hola, {user.name}</span>
+            <RoleBadge role={user.role} size="lg" />
+          </h1>
           <p className="muted">Panel principal de alabanza y acordes.</p>
         </div>
         <div className="row">

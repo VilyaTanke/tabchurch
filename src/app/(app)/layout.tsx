@@ -8,7 +8,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (user.mustChangePw) redirect("/cambiar-clave");
   return (
     <div className="shell">
-      <Nav isAdmin={user.role === "admin"} />
+      <Nav
+        isAdmin={user.role === "admin"}
+        user={{ name: user.name, role: user.role }}
+      />
       <main className="main">
         <Reveal onRoute>{children}</Reveal>
       </main>

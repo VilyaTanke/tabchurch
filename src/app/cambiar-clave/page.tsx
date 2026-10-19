@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { changePassword, logout } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 import Reveal from "@/components/Reveal";
+import RoleBadge from "@/components/RoleBadge";
 
 export const metadata = { title: "Cambiar contraseña · Tab-NuevaVida" };
 
@@ -31,7 +32,10 @@ export default async function ChangePasswordPage() {
                 border: "1px solid rgba(0,0,0,0.06)",
               }}
             />
-            <h1>Hola, {user.name}</h1>
+            <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+              <span>Hola, {user.name}</span>
+              <RoleBadge role={user.role} />
+            </h1>
             <p className="muted">
               {user.mustChangePw
                 ? "Por seguridad, debes crear una contraseña nueva antes de continuar."

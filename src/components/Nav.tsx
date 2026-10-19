@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
 import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/actions";
+import RoleBadge from "@/components/RoleBadge";
 
 type NavItem = {
   href: string;
@@ -21,7 +22,13 @@ const links: NavItem[] = [
   { href: "/grupos", label: "Grupos", icon: Users },
 ];
 
-export default function Nav({ isAdmin }: { isAdmin: boolean }) {
+export default function Nav({
+  isAdmin,
+  user,
+}: {
+  isAdmin: boolean;
+  user?: { name: string; role: string };
+}) {
   const path = usePathname();
   const ref = useRef<HTMLElement>(null);
   const first = useRef(true);
@@ -78,6 +85,14 @@ export default function Nav({ isAdmin }: { isAdmin: boolean }) {
         );
       })}
       <span className="spacer" />
+      {user && (
+        <div className="nav-profile">
+          <span className="nav-profile-name" title={user.name}>
+            {user.name}
+          </span>
+          <RoleBadge role={user.role} />
+        </div>
+      )}
       <form action={logout}>
         <button className="nav-link" style={{ width: "100%" }}>
           <span className="ico" aria-hidden>

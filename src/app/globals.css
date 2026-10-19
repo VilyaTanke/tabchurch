@@ -113,8 +113,20 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   transition: transform 0.15s ease, background 0.15s ease;
   box-sizing: border-box;
 }
+.role-badge.sm {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+}
+.role-badge.lg {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+}
 .role-badge:hover {
-  transform: scale(1.15);
+  transform: scale(1.12);
 }
 .role-badge.role-admin {
   background: rgba(245, 158, 11, 0.14);
@@ -180,7 +192,7 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   border-top: 1px solid var(--border);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
 }
-.nav .brand, .nav .brand-link, .nav .spacer { display: none; }
+.nav .brand, .nav .brand-link, .nav .spacer, .nav-profile { display: none; }
 .nav-link {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   min-width: 64px; padding: 0.4rem 0.6rem; border-radius: 12px;
@@ -219,6 +231,25 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
     border: 1px solid rgba(0, 0, 0, 0.08);
   }
   .nav .spacer { display: block; flex: 1; }
+  .nav-profile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 0.4rem;
+  }
+  .nav-profile-name {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .nav-link { flex-direction: row; gap: 0.75rem; font-size: 0.95rem; padding: 0.75rem 0.9rem; }
   .main { margin-left: 220px; max-width: none; padding: 2rem 2.5rem; }
   .main > * { max-width: 1000px; }
