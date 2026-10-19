@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import {
+  Plus,
+  Clock,
+  User,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 
@@ -56,16 +65,33 @@ export default async function SongsPage({
             {totalPages > 1 ? ` · Página ${currentPage} de ${totalPages}` : ""}
           </p>
         </div>
-        <Link href="/canciones/nueva" className="btn">+ Nueva</Link>
+        <Link
+          href="/canciones/nueva"
+          className="btn"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <Plus size={16} />
+          <span>Nueva</span>
+        </Link>
       </div>
 
       {/* Pestañas de Vista */}
       <div className="row" style={{ gap: "0.5rem" }}>
-        <Link href="/canciones" className="btn small">
-          🕒 Últimas agregadas
+        <Link
+          href="/canciones"
+          className="btn small"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <Clock size={14} />
+          <span>Últimas agregadas</span>
         </Link>
-        <Link href="/canciones/artistas" className="btn ghost small">
-          🎤 Por Artista
+        <Link
+          href="/canciones/artistas"
+          className="btn ghost small"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <User size={14} />
+          <span>Por Artista</span>
         </Link>
       </div>
 
@@ -77,10 +103,21 @@ export default async function SongsPage({
           placeholder="Buscar por título o artista…"
           aria-label="Buscar canciones"
         />
-        <button className="btn ghost">Buscar</button>
+        <button
+          className="btn ghost"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        >
+          <Search size={14} />
+          <span>Buscar</span>
+        </button>
         {q && (
-          <Link href="/canciones" className="btn ghost small">
-            Limpiar filtro
+          <Link
+            href="/canciones"
+            className="btn ghost small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <X size={13} />
+            <span>Limpiar filtro</span>
           </Link>
         )}
       </form>
@@ -119,12 +156,22 @@ export default async function SongsPage({
       {totalPages > 1 && (
         <div className="row" style={{ justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
           {currentPage > 1 ? (
-            <Link href={buildPageUrl(currentPage - 1)} className="btn ghost small">
-              ‹ Anterior
+            <Link
+              href={buildPageUrl(currentPage - 1)}
+              className="btn ghost small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <ChevronLeft size={15} />
+              <span>Anterior</span>
             </Link>
           ) : (
-            <button className="btn ghost small" disabled style={{ opacity: 0.4, cursor: "not-allowed" }}>
-              ‹ Anterior
+            <button
+              className="btn ghost small"
+              disabled
+              style={{ opacity: 0.4, cursor: "not-allowed", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <ChevronLeft size={15} />
+              <span>Anterior</span>
             </button>
           )}
 
@@ -145,12 +192,22 @@ export default async function SongsPage({
           </div>
 
           {currentPage < totalPages ? (
-            <Link href={buildPageUrl(currentPage + 1)} className="btn ghost small">
-              Siguiente ›
+            <Link
+              href={buildPageUrl(currentPage + 1)}
+              className="btn ghost small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <span>Siguiente</span>
+              <ChevronRight size={15} />
             </Link>
           ) : (
-            <button className="btn ghost small" disabled style={{ opacity: 0.4, cursor: "not-allowed" }}>
-              Siguiente ›
+            <button
+              className="btn ghost small"
+              disabled
+              style={{ opacity: 0.4, cursor: "not-allowed", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <span>Siguiente</span>
+              <ChevronRight size={15} />
             </button>
           )}
         </div>

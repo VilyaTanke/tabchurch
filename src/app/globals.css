@@ -145,7 +145,8 @@ h2 { font-size: 1.15rem; font-weight: 600; }
   font-size: 0.72rem; color: var(--muted); transition: color 0.2s, background 0.2s;
   background: none; border: 0; font-family: inherit; cursor: pointer;
 }
-.nav-link .ico { font-size: 1.35rem; line-height: 1; }
+.nav-link .ico { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.nav-link svg { flex-shrink: 0; }
 .nav-link:hover, .nav-link.active { color: var(--text); background: var(--surface-2); }
 
 @media (min-width: 768px) {
@@ -420,7 +421,9 @@ h2 { font-size: 1.15rem; font-weight: 600; }
 }
 
 .cifra-icon {
-  font-size: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 

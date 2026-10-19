@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { desc, eq, or, sql } from "drizzle-orm";
+import { Users, ListPlus } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { createSetlist } from "@/app/setlists-actions";
@@ -71,8 +72,13 @@ export default async function SetlistsPage() {
               <div className="row">
                 <strong className="grow">{l.name}</strong>
                 {l.groupName && (
-                  <span className="badge admin" title="Lista de grupo">
-                    👥 {l.groupName}
+                  <span
+                    className="badge admin"
+                    title="Lista de grupo"
+                    style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                  >
+                    <Users size={12} />
+                    <span>{l.groupName}</span>
                   </span>
                 )}
               </div>

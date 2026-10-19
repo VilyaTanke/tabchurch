@@ -4,20 +4,29 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
+import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/actions";
 
-const links = [
-  { href: "/", label: "Inicio", ico: "🏠" },
-  { href: "/canciones", label: "Canciones", ico: "🎸" },
-  { href: "/listas", label: "Listas", ico: "📋" },
-  { href: "/grupos", label: "Grupos", ico: "👥" },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const links: NavItem[] = [
+  { href: "/", label: "Inicio", icon: Home },
+  { href: "/canciones", label: "Canciones", icon: Music },
+  { href: "/listas", label: "Listas", icon: ListMusic },
+  { href: "/grupos", label: "Grupos", icon: Users },
 ];
 
 export default function Nav({ isAdmin }: { isAdmin: boolean }) {
   const path = usePathname();
   const ref = useRef<HTMLElement>(null);
   const first = useRef(true);
-  const all = isAdmin ? [...links, { href: "/admin", label: "Admin", ico: "🛡️" }] : links;
+  const all: NavItem[] = isAdmin
+    ? [...links, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+    : links;
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
 
   useEffect(() => {
@@ -47,16 +56,24 @@ export default function Nav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav className="nav" aria-label="Principal" ref={ref}>
       <span className="brand">TabChurch</span>
-      {all.map((l) => (
-        <Link key={l.href} href={l.href} className={`nav-link ${active(l.href) ? "active" : ""}`}>
-          <span className="ico" aria-hidden>{l.ico}</span>
-          {l.label}
-        </Link>
-      ))}
+      {all.map((l) => {
+        const Icon = l.icon;
+        return (
+          <Link key={l.href} href={l.href} className={`nav-link ${active(l.href) ? "active" : ""}`}>
+            <span className="ico" aria-hidden>
+              <Icon size={18} strokeWidth={2.2} />
+            </span>
+            {l.label}
+          </Link>
+        );
+      })}
       <span className="spacer" />
       <form action={logout}>
         <button className="nav-link" style={{ width: "100%" }}>
-          <span className="ico" aria-hidden>🚪</span>Salir
+          <span className="ico" aria-hidden>
+            <LogOut size={18} strokeWidth={2.2} />
+          </span>
+          Salir
         </button>
       </form>
     </nav>

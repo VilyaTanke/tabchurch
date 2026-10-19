@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { Globe, Download, Edit3, Eye, Save } from "lucide-react";
 import { saveSong, importSongFromUrl } from "@/app/songs-actions";
 import { SongBody } from "@/components/SongViewer";
 import { KEYS, convertChordsOverLyrics, diatonicChords } from "@/lib/chordpro";
@@ -87,7 +88,10 @@ export default function SongEditor({ song }: { song?: Song }) {
         <section className="card stack" style={{ background: "rgba(139, 123, 255, 0.08)", borderColor: "rgba(139, 123, 255, 0.3)" }}>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <div>
-              <strong>🌐 Importar desde URL</strong>
+              <strong style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+                <Globe size={18} />
+                <span>Importar desde URL</span>
+              </strong>
               <p className="muted" style={{ fontSize: "0.85rem" }}>
                 Pega el enlace de una canción (ej: CifraClub) y extraeremos título, artista y acordes automáticamente.
               </p>
@@ -107,8 +111,10 @@ export default function SongEditor({ song }: { song?: Song }) {
               className="btn"
               onClick={handleImport}
               disabled={importing || !importUrl.trim()}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
             >
-              {importing ? "Importando…" : "Importar"}
+              <Download size={14} />
+              <span>{importing ? "Importando…" : "Importar"}</span>
             </button>
           </div>
           {importError && <div className="alert error">{importError}</div>}
@@ -183,8 +189,24 @@ export default function SongEditor({ song }: { song?: Song }) {
         <div className="row">
           <h2 className="grow">Cifrado</h2>
           <div className="seg-toggle">
-            <button type="button" className={tab === "edit" ? "on" : ""} onClick={() => setTab("edit")}>Editar</button>
-            <button type="button" className={tab === "preview" ? "on" : ""} onClick={() => setTab("preview")}>Vista previa</button>
+            <button
+              type="button"
+              className={tab === "edit" ? "on" : ""}
+              onClick={() => setTab("edit")}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              <Edit3 size={13} />
+              <span>Editar</span>
+            </button>
+            <button
+              type="button"
+              className={tab === "preview" ? "on" : ""}
+              onClick={() => setTab("preview")}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              <Eye size={13} />
+              <span>Vista previa</span>
+            </button>
           </div>
         </div>
 
@@ -226,7 +248,14 @@ export default function SongEditor({ song }: { song?: Song }) {
 
       {state?.error && <div className="alert error" role="alert">{state.error}</div>}
       <div className="row">
-        <button className="btn" disabled={pending}>{pending ? "Guardando…" : "Guardar canción"}</button>
+        <button
+          className="btn"
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Save size={16} />
+          <span>{pending ? "Guardando…" : "Guardar canción"}</span>
+        </button>
       </div>
     </form>
   );

@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { asc, desc, eq, or, sql } from "drizzle-orm";
+import {
+  Plus,
+  ListPlus,
+  ArrowRight,
+  Users,
+  Mic2,
+  ChevronRight,
+} from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { getUserGroups } from "@/lib/groups";
@@ -35,15 +43,25 @@ export default async function Home() {
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
-          <h1>Hola, {user.name} 👋</h1>
+          <h1>Hola, {user.name}</h1>
           <p className="muted">Panel principal de alabanza y acordes.</p>
         </div>
         <div className="row">
-          <Link href="/canciones/nueva" className="btn small">
-            + Nueva Canción
+          <Link
+            href="/canciones/nueva"
+            className="btn small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Plus size={15} />
+            <span>Nueva Canción</span>
           </Link>
-          <Link href="/listas" className="btn small ghost">
-            + Nueva Lista
+          <Link
+            href="/listas"
+            className="btn small ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <ListPlus size={15} />
+            <span>Nueva Lista</span>
           </Link>
         </div>
       </div>
@@ -52,8 +70,13 @@ export default async function Home() {
         <section className="card stack">
           <div className="row" style={{ justifyContent: "space-between" }}>
             <h2>Próximas listas</h2>
-            <Link href="/listas" className="muted" style={{ fontSize: "0.85rem" }}>
-              Ver todas →
+            <Link
+              href="/listas"
+              className="muted"
+              style={{ fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <span>Ver todas</span>
+              <ArrowRight size={13} />
             </Link>
           </div>
           {setlists.length === 0 ? (
@@ -64,12 +87,18 @@ export default async function Home() {
                 <div key={sl.id} className="sl-row" style={{ justifyContent: "space-between" }}>
                   <div>
                     <Link href={`/listas/${sl.id}`} style={{ fontWeight: 600 }}>
-                      {sl.name}
+                       {sl.name}
                     </Link>
-                    <div className="muted" style={{ fontSize: "0.8rem" }}>
-                      {sl.count} canciones
-                      {sl.groupName ? ` · 👥 ${sl.groupName}` : " · Personal"}
-                      {sl.eventDate ? ` · ${sl.eventDate}` : ""}
+                    <div className="muted" style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.3rem", flexWrap: "wrap" }}>
+                      <span>{sl.count} canciones</span>
+                      {sl.groupName ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>
+                          · <Users size={12} /> {sl.groupName}
+                        </span>
+                      ) : (
+                        <span>· Personal</span>
+                      )}
+                      {sl.eventDate ? <span>· {sl.eventDate}</span> : null}
                     </div>
                   </div>
                   <Link
@@ -79,9 +108,13 @@ export default async function Home() {
                       background: "linear-gradient(135deg, #10b981, #06b6d4)",
                       fontSize: "0.75rem",
                       padding: "0 0.6rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
                     }}
                   >
-                    🎤 Escenario
+                    <Mic2 size={13} />
+                    <span>Escenario</span>
                   </Link>
                 </div>
               ))}
@@ -92,8 +125,13 @@ export default async function Home() {
         <section className="card stack">
           <div className="row" style={{ justifyContent: "space-between" }}>
             <h2>Tus grupos ({myGroups.length})</h2>
-            <Link href="/grupos" className="muted" style={{ fontSize: "0.85rem" }}>
-              Gestionar →
+            <Link
+              href="/grupos"
+              className="muted"
+              style={{ fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+            >
+              <span>Gestionar</span>
+              <ArrowRight size={13} />
             </Link>
           </div>
           {myGroups.length === 0 ? (
@@ -110,7 +148,7 @@ export default async function Home() {
                       Rol: {g.role === "owner" ? "Propietario" : g.role === "editor" ? "Editor" : "Lector"}
                     </div>
                   </div>
-                  <span className="muted">›</span>
+                  <ChevronRight size={16} className="muted" />
                 </Link>
               ))}
             </div>

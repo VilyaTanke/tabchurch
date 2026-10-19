@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getUserGroups } from "@/lib/groups";
 import { createGroup } from "@/app/groups-actions";
@@ -52,8 +53,12 @@ export default async function GroupsPage() {
                   {roleLabel[g.role] || g.role}
                 </span>
               </div>
-              <span className="muted" style={{ fontSize: "0.85rem" }}>
-                Ver listas compartidas y miembros →
+              <span
+                className="muted"
+                style={{ fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+              >
+                <span>Ver listas compartidas y miembros</span>
+                <ArrowRight size={13} />
               </span>
             </Link>
           ))}

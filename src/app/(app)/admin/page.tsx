@@ -1,4 +1,5 @@
 import { asc } from "drizzle-orm";
+import { ShieldCheck, UserPlus, KeyRound, UserCheck, UserX } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
 import { createUser, resetPassword, toggleUserActive } from "@/app/actions";
@@ -17,7 +18,10 @@ export default async function AdminPage() {
       </div>
 
       <section className="card stack">
-        <h2>Nuevo usuario</h2>
+        <h2 style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+          <UserPlus size={18} />
+          <span>Nuevo usuario</span>
+        </h2>
         <ActionForm action={createUser} submitLabel="Crear usuario" resetOnOk>
           <div className="grid two">
             <Field label="Nombre completo" name="name" />
@@ -41,7 +45,15 @@ export default async function AdminPage() {
           <div key={u.id} className="user-row">
             <div>
               <strong>{u.name}</strong> <span className="muted">@{u.username}</span>{" "}
-              {u.role === "admin" && <span className="badge admin">admin</span>}{" "}
+              {u.role === "admin" && (
+                <span
+                  className="badge admin"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                >
+                  <ShieldCheck size={12} />
+                  <span>admin</span>
+                </span>
+              )}{" "}
               {!u.active && <span className="badge off">desactivado</span>}
               {u.email && <div className="muted" style={{ fontSize: "0.85rem" }}>{u.email}</div>}
             </div>
@@ -50,13 +62,32 @@ export default async function AdminPage() {
                 <input type="hidden" name="id" value={u.id} />
                 <input name="password" className="input" style={{ width: 150, minHeight: 38 }}
                   placeholder="Nueva clave" minLength={8} required />
-                <button className="btn ghost small">Restablecer</button>
+                <button
+                  className="btn ghost small"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                >
+                  <KeyRound size={13} />
+                  <span>Restablecer</span>
+                </button>
               </form>
               {u.id !== me.id && (
                 <form action={toggleUserActive}>
                   <input type="hidden" name="id" value={u.id} />
-                  <button className={`btn small ${u.active ? "danger" : "ghost"}`}>
-                    {u.active ? "Desactivar" : "Activar"}
+                  <button
+                    className={`btn small ${u.active ? "danger" : "ghost"}`}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                  >
+                    {u.active ? (
+                      <>
+                        <UserX size={13} />
+                        <span>Desactivar</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck size={13} />
+                        <span>Activar</span>
+                      </>
+                    )}
                   </button>
                 </form>
               )}

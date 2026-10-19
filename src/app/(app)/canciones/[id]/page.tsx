@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { deleteSong } from "@/app/songs-actions";
@@ -25,7 +26,14 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="stack">
       <div>
-        <Link href="/canciones" className="muted">← Canciones</Link>
+        <Link
+          href="/canciones"
+          className="muted"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        >
+          <ArrowLeft size={14} />
+          <span>Canciones</span>
+        </Link>
         <h1>{song.title}</h1>
         <p className="muted" style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginTop: "0.25rem" }}>
           <span>{song.artist || "Sin artista"}</span>
@@ -61,16 +69,26 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
       />
       <div className="row">
         {canEditOrDelete && (
-          <Link href={`/canciones/${song.id}/editar`} className="btn ghost">
-            Editar
+          <Link
+            href={`/canciones/${song.id}/editar`}
+            className="btn ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Pencil size={14} />
+            <span>Editar</span>
           </Link>
         )}
         <PrintButton />
         {canEditOrDelete && (
           <form action={deleteSong}>
             <input type="hidden" name="id" value={song.id} />
-            <button className="btn danger" formNoValidate>
-              Eliminar
+            <button
+              className="btn danger"
+              formNoValidate
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <Trash2 size={14} />
+              <span>Eliminar</span>
             </button>
           </form>
         )}

@@ -10,6 +10,14 @@ import {
   transposeContent,
   transposeKey,
 } from "@/lib/chordpro";
+import {
+  X,
+  ScrollText,
+  Columns2,
+  SunMedium,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { SongBody } from "@/components/SongViewer";
 
 type StageSong = {
@@ -143,8 +151,14 @@ export default function StageMode({
       {/* Barra superior de control */}
       <header className="stage-bar">
         <div className="row" style={{ flexWrap: "nowrap" }}>
-          <Link href={`/listas/${setlistId}`} className="stage-btn" title="Salir del modo escenario">
-            ✕ Salir
+          <Link
+            href={`/listas/${setlistId}`}
+            className="stage-btn"
+            title="Salir del modo escenario"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <X size={15} />
+            <span>Salir</span>
           </Link>
           <div className="stage-info ellipsis">
             <span className="stage-title">{song.title}</span>
@@ -203,21 +217,28 @@ export default function StageMode({
             className={`stage-btn small ${autoScrollSpeed > 0 ? "active" : ""}`}
             onClick={() => setAutoScrollSpeed((s) => (s + 1) % 4)}
             title="Velocidad de desplazamiento automático"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
-            📜 {autoScrollSpeed === 0 ? "Scroll" : `${autoScrollSpeed}x`}
+            <ScrollText size={14} />
+            <span>{autoScrollSpeed === 0 ? "Scroll" : `${autoScrollSpeed}x`}</span>
           </button>
 
           <button
             className={`stage-btn small ${twoColumns ? "active" : ""}`}
             onClick={() => setTwoColumns((c) => !c)}
             title="2 Columnas (tablets / pantalla ancha)"
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
           >
-            📖
+            <Columns2 size={16} />
           </button>
 
           {wakeLockActive && (
-            <span className="badge admin" style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem" }} title="Pantalla activa">
-              💡 ON
+            <span
+              className="badge admin"
+              style={{ fontSize: "0.7rem", padding: "0.2rem 0.5rem", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+              title="Pantalla activa"
+            >
+              <SunMedium size={12} /> ON
             </span>
           )}
         </div>
@@ -245,8 +266,10 @@ export default function StageMode({
             setIndex((i) => Math.max(0, i - 1));
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
           }}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
         >
-          ‹ Anterior
+          <ChevronLeft size={16} />
+          <span>Anterior</span>
         </button>
 
         <div className="stage-selector">
@@ -273,8 +296,10 @@ export default function StageMode({
             setIndex((i) => Math.min(songs.length - 1, i + 1));
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
           }}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
         >
-          Siguiente ›
+          <span>Siguiente</span>
+          <ChevronRight size={16} />
         </button>
       </footer>
     </div>

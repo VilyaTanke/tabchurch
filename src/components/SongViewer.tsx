@@ -3,6 +3,18 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { animate } from "animejs";
 import { isChord, keyPrefersFlats, parseChordPro, semitonesBetween, transposeContent, transposeKey } from "@/lib/chordpro";
+import {
+  SlidersHorizontal,
+  Save,
+  Check,
+  RotateCcw,
+  Columns2,
+  FileMusic,
+  Languages,
+  ScrollText,
+  Type,
+  Music,
+} from "lucide-react";
 import { updateSongKey } from "@/app/songs-actions";
 
 export function SongBody({
@@ -172,7 +184,7 @@ export default function SongViewer({
         {/* Tono */}
         <div className="cifra-menu-item">
           <div className="cifra-menu-label">
-            <span className="cifra-icon">🎚️</span>
+            <span className="cifra-icon"><SlidersHorizontal size={17} /></span>
             <span>Tono</span>
           </div>
           <div className="cifra-key-control">
@@ -192,20 +204,29 @@ export default function SongViewer({
         {originalKey && (
           <div style={{ padding: "0 0.5rem 0.5rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             {songId && isDifferentFromSaved && activeKey && (
-              <button className="btn small" onClick={handleSaveKey} disabled={isPending} style={{ width: "100%", fontSize: "0.8rem" }}>
-                {isPending ? "Guardando…" : `💾 Guardar tono (${activeKey})`}
+              <button
+                className="btn small"
+                onClick={handleSaveKey}
+                disabled={isPending}
+                style={{ width: "100%", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+              >
+                <Save size={13} />
+                <span>{isPending ? "Guardando…" : `Guardar tono (${activeKey})`}</span>
               </button>
             )}
             {savedFeedback && (
-              <span style={{ fontSize: "0.78rem", color: "var(--ok)", textAlign: "center" }}>✓ Guardado como activo</span>
+              <span style={{ fontSize: "0.78rem", color: "var(--ok)", textAlign: "center", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
+                <Check size={13} /> Guardado como activo
+              </span>
             )}
             {steps !== 0 && (
               <button
                 className="btn ghost small"
                 onClick={() => { setSteps(0); setSavedFeedback(false); }}
-                style={{ width: "100%", fontSize: "0.78rem" }}
+                style={{ width: "100%", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
               >
-                Restablecer original ({originalKey})
+                <RotateCcw size={12} />
+                <span>Restablecer ({originalKey})</span>
               </button>
             )}
           </div>
@@ -218,7 +239,7 @@ export default function SongViewer({
           className={`cifra-menu-btn ${twoCols ? "active" : ""}`}
           onClick={() => setTwoCols((c) => !c)}
         >
-          <span className="cifra-icon">📖</span>
+          <span className="cifra-icon"><Columns2 size={17} /></span>
           <span className="grow text-left">Dividir en columnas</span>
           <span className="cifra-status">{twoCols ? "2 Col" : "1 Col"}</span>
         </button>
@@ -228,7 +249,7 @@ export default function SongViewer({
           className={`cifra-menu-btn ${hideTabs ? "active" : ""}`}
           onClick={() => setHideTabs((h) => !h)}
         >
-          <span className="cifra-icon">🎼</span>
+          <span className="cifra-icon"><FileMusic size={17} /></span>
           <span className="grow text-left">Tablaturas</span>
           <span className="cifra-status">{hideTabs ? "Ocultas" : "Visibles"}</span>
         </button>
@@ -239,7 +260,7 @@ export default function SongViewer({
           onClick={handleTranslate}
           disabled={isTranslating}
         >
-          <span className="cifra-icon">🌐</span>
+          <span className="cifra-icon"><Languages size={17} /></span>
           <span className="grow text-left">Traducir a español</span>
           <span className="cifra-status">
             {isTranslating ? "Traduciendo…" : isTranslated ? "Original ↩" : "Traducir"}
@@ -251,7 +272,7 @@ export default function SongViewer({
           className={`cifra-menu-btn ${autoScrollSpeed > 0 ? "active" : ""}`}
           onClick={() => setAutoScrollSpeed((s) => (s + 1) % 4)}
         >
-          <span className="cifra-icon">📜</span>
+          <span className="cifra-icon"><ScrollText size={17} /></span>
           <span className="grow text-left">Desplazar</span>
           <span className="cifra-status">
             {autoScrollSpeed === 0 ? "Off" : `${autoScrollSpeed}x`}
@@ -261,7 +282,7 @@ export default function SongViewer({
         {/* Tamaño de texto */}
         <div className="cifra-menu-item">
           <div className="cifra-menu-label">
-            <span className="cifra-icon">🔤</span>
+            <span className="cifra-icon"><Type size={17} /></span>
             <span>Tamaño letra</span>
           </div>
           <div className="row" style={{ gap: "0.25rem" }}>
@@ -279,7 +300,7 @@ export default function SongViewer({
           className={`cifra-menu-btn ${chords ? "active" : ""}`}
           onClick={() => setChords((c) => !c)}
         >
-          <span className="cifra-icon">🎸</span>
+          <span className="cifra-icon"><Music size={17} /></span>
           <span className="grow text-left">Cifrado de acordes</span>
           <span className="cifra-status">{chords ? "Visible" : "Oculto"}</span>
         </button>
@@ -302,8 +323,9 @@ export default function SongViewer({
         )}
 
         {isTranslated && (
-          <div className="alert ok" style={{ marginBottom: "1rem" }}>
-            🌐 Letra traducida al español (los acordes se mantienen intactos en su posición).
+          <div className="alert ok" style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Languages size={17} />
+            <span>Letra traducida al español (los acordes se mantienen intactos en su posición).</span>
           </div>
         )}
 

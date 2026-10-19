@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, Mic2, UserMinus, LogOut, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import {
   getGroupDetails,
@@ -49,8 +50,13 @@ export default async function GroupDetailPage({
   return (
     <div className="stack">
       <div>
-        <Link href="/grupos" className="muted" style={{ fontSize: "0.9rem" }}>
-          ← Volver a grupos
+        <Link
+          href="/grupos"
+          className="muted"
+          style={{ fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        >
+          <ArrowLeft size={14} />
+          <span>Volver a grupos</span>
         </Link>
         <div className="row" style={{ marginTop: "0.4rem" }}>
           <h1 className="grow">{group.name}</h1>
@@ -117,9 +123,13 @@ export default async function GroupDetailPage({
                         background: "linear-gradient(135deg, #10b981, #06b6d4)",
                         fontSize: "0.8rem",
                         padding: "0 0.8rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
                       }}
                     >
-                      🎤 Escenario
+                      <Mic2 size={13} />
+                      <span>Escenario</span>
                     </Link>
                   </div>
                 </div>
@@ -134,8 +144,9 @@ export default async function GroupDetailPage({
 
           {isOwner && (
             <div style={{ padding: "0.75rem", background: "var(--surface-2)", borderRadius: "12px" }}>
-              <strong style={{ fontSize: "0.9rem", display: "block", marginBottom: "0.5rem" }}>
-                + Agregar miembro por @usuario
+              <strong style={{ fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: "0.35rem", marginBottom: "0.5rem" }}>
+                <Plus size={14} />
+                <span>Agregar miembro por @usuario</span>
               </strong>
               <ActionForm action={addMemberToGroup} submitLabel="Añadir al grupo" resetOnOk>
                 <input type="hidden" name="groupId" value={groupId} />
@@ -193,8 +204,12 @@ export default async function GroupDetailPage({
                       <form action={removeGroupMember}>
                         <input type="hidden" name="groupId" value={groupId} />
                         <input type="hidden" name="userId" value={m.userId} />
-                        <button className="btn danger small" title="Quitar del grupo">
-                          ✕
+                        <button
+                          className="btn danger small"
+                          title="Quitar del grupo"
+                          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 0.5rem" }}
+                        >
+                          <UserMinus size={13} />
                         </button>
                       </form>
                     </>
@@ -203,7 +218,13 @@ export default async function GroupDetailPage({
                     <form action={removeGroupMember}>
                       <input type="hidden" name="groupId" value={groupId} />
                       <input type="hidden" name="userId" value={m.userId} />
-                      <button className="btn ghost small">Salir del grupo</button>
+                      <button
+                        className="btn ghost small"
+                        style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                      >
+                        <LogOut size={13} />
+                        <span>Salir del grupo</span>
+                      </button>
                     </form>
                   )}
                 </div>

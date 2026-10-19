@@ -9,6 +9,7 @@ import {
   SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Trash2, Plus } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import {
   addSongToSetlist, removeSetlistItem, reorderSetlist, setItemKey,
@@ -30,7 +31,15 @@ function Row({
       className={`sl-row ${isDragging ? "dragging" : ""}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <button className="drag-handle" aria-label={`Mover ${item.title}`} {...attributes} {...listeners}>⠿</button>
+      <button
+        className="drag-handle"
+        aria-label={`Mover ${item.title}`}
+        {...attributes}
+        {...listeners}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <GripVertical size={16} />
+      </button>
       <div className="grow" style={{ minWidth: 0 }}>
         <strong className="ellipsis">{item.title}</strong>
         <div className="muted ellipsis" style={{ fontSize: "0.85rem" }}>{item.artist || "Sin artista"}</div>
@@ -44,7 +53,14 @@ function Row({
         <option value="">—</option>
         {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
       </select>
-      <button className="btn danger small" onClick={onRemove} aria-label={`Quitar ${item.title}`}>✕</button>
+      <button
+        className="btn danger small"
+        onClick={onRemove}
+        aria-label={`Quitar ${item.title}`}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 0.5rem" }}
+      >
+        <Trash2 size={13} />
+      </button>
     </li>
   );
 }
@@ -114,6 +130,7 @@ export default function SetlistEditor({
               </div>
               <button
                 className="btn small"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
                 onClick={() => {
                   start(async () => {
                     const added = await addSongToSetlist(setlistId, s.id);
@@ -124,7 +141,10 @@ export default function SetlistEditor({
                       ]);
                   });
                 }}
-              >+ Añadir</button>
+              >
+                <Plus size={13} />
+                <span>Añadir</span>
+              </button>
             </li>
           ))}
         </ul>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { and, asc, eq } from "drizzle-orm";
+import { ArrowLeft, Mic2, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { deleteSetlist, updateSetlist } from "@/app/setlists-actions";
@@ -43,8 +44,13 @@ export default async function SetlistDetailPage({
     <div className="stack">
       <div className="row">
         <div className="grow">
-          <Link href="/listas" className="muted" style={{ fontSize: "0.9rem" }}>
-            ← Volver a listas
+          <Link
+            href="/listas"
+            className="muted"
+            style={{ fontSize: "0.9rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <ArrowLeft size={14} />
+            <span>Volver a listas</span>
           </Link>
           <h1>{list.name}</h1>
           <p className="muted">
@@ -67,16 +73,26 @@ export default async function SetlistDetailPage({
                 style={{
                   background: "linear-gradient(135deg, #10b981, #06b6d4)",
                   boxShadow: "0 8px 24px -8px rgba(16, 185, 129, 0.7)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
                 }}
               >
-                🎤 Modo Escenario
+                <Mic2 size={16} />
+                <span>Modo Escenario</span>
               </Link>
-              <PrintButton label="🖨️ Imprimir Lista / PDF" />
+              <PrintButton label="Imprimir Lista / PDF" />
             </>
           )}
           <form action={deleteSetlist}>
             <input type="hidden" name="id" value={list.id} />
-            <button className="btn danger small">Eliminar</button>
+            <button
+              className="btn danger small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              <Trash2 size={13} />
+              <span>Eliminar</span>
+            </button>
           </form>
         </div>
       </div>

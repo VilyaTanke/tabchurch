@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WifiOff } from "lucide-react";
 
 export default function PwaManager() {
   const [isOffline, setIsOffline] = useState(false);
@@ -52,9 +53,14 @@ export default function PwaManager() {
         fontSize: "0.85rem",
         fontWeight: 700,
         boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.5rem",
       }}
     >
-      📶 Modo Sin Conexión activo — Puedes seguir consultando tus acordes y listas guardadas en caché
+      <WifiOff size={16} />
+      <span>Modo Sin Conexión activo — Puedes seguir consultando tus acordes y listas guardadas en caché</span>
     </div>
   );
 }

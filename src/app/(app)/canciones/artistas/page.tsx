@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { asc, desc, eq, like, or, sql } from "drizzle-orm";
+import {
+  Plus,
+  Clock,
+  User,
+  Search,
+  X,
+  ArrowRight,
+} from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 
@@ -53,15 +61,32 @@ export default async function ArtistsPage({
             Explora tus cifrados organizados por autor o agrupación.
           </p>
         </div>
-        <Link href="/canciones/nueva" className="btn">+ Nueva</Link>
+        <Link
+          href="/canciones/nueva"
+          className="btn"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <Plus size={16} />
+          <span>Nueva</span>
+        </Link>
       </div>
 
       <div className="row" style={{ gap: "0.5rem" }}>
-        <Link href="/canciones" className="btn ghost small">
-          🕒 Últimas agregadas
+        <Link
+          href="/canciones"
+          className="btn ghost small"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <Clock size={14} />
+          <span>Últimas agregadas</span>
         </Link>
-        <Link href="/canciones/artistas" className="btn small">
-          🎤 Por Artista ({artistsSummary.length})
+        <Link
+          href="/canciones/artistas"
+          className="btn small"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <User size={14} />
+          <span>Por Artista ({artistsSummary.length})</span>
         </Link>
       </div>
 
@@ -74,10 +99,21 @@ export default async function ArtistsPage({
           placeholder="Filtrar artista (ej. Barak, Hillsong, Miel San Marcos)…"
           aria-label="Filtrar artistas"
         />
-        <button className="btn ghost">Filtrar</button>
+        <button
+          className="btn ghost"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+        >
+          <Search size={14} />
+          <span>Filtrar</span>
+        </button>
         {q && (
-          <Link href="/canciones/artistas" className="btn ghost small">
-            Limpiar
+          <Link
+            href="/canciones/artistas"
+            className="btn ghost small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <X size={13} />
+            <span>Limpiar</span>
           </Link>
         )}
       </form>
@@ -92,8 +128,13 @@ export default async function ArtistsPage({
               </span>
               <h2>{artist} ({selectedSongs.length} canciones)</h2>
             </div>
-            <Link href="/canciones/artistas" className="btn ghost small">
-              ✕ Cerrar artista
+            <Link
+              href="/canciones/artistas"
+              className="btn ghost small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              <X size={13} />
+              <span>Cerrar artista</span>
             </Link>
           </div>
 
@@ -148,8 +189,12 @@ export default async function ArtistsPage({
                     {a.count} {a.count === 1 ? "canción" : "canciones"}
                   </span>
                 </div>
-                <span className="muted" style={{ fontSize: "0.8rem" }}>
-                  Ver repertorio de este artista →
+                <span
+                  className="muted"
+                  style={{ fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}
+                >
+                  <span>Ver repertorio</span>
+                  <ArrowRight size={13} />
                 </span>
               </Link>
             );
