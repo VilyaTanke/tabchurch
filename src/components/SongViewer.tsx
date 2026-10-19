@@ -329,7 +329,7 @@ export default function SongViewer({
           </div>
         )}
 
-        <div className="card" style={{ padding: "1.75rem", background: "rgba(18, 19, 38, 0.7)" }}>
+        <div className="card" style={{ padding: "1.75rem" }}>
           <SongBody
             content={shown}
             showChords={chords}
