@@ -2,12 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
 import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/actions";
 import RoleBadge from "@/components/RoleBadge";
+import BrandLogo from "@/components/BrandLogo";
 
 type NavItem = {
   href: string;
@@ -64,14 +64,7 @@ export default function Nav({
   return (
     <nav className="nav" aria-label="Principal" ref={ref}>
       <Link href="/" className="brand-link" aria-label="Tab-NuevaVida - Inicio">
-        <Image
-          src="/logo.png"
-          alt="Tab-NuevaVida"
-          width={188}
-          height={46}
-          priority
-          className="brand-img"
-        />
+        <BrandLogo className="brand-logo" />
       </Link>
       {all.map((l) => {
         const Icon = l.icon;

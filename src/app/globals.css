@@ -221,14 +221,17 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   .nav .brand-link:hover {
     transform: translateY(-1px) scale(1.02);
   }
-  .brand-img {
+  .brand-logo, .brand-img {
     width: 100%;
-    max-width: 188px;
+    max-width: 190px;
     height: auto;
     display: block;
-    border-radius: 8px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.16));
+    transition: filter 0.25s ease, transform 0.25s ease;
+  }
+  .nav .brand-link:hover .brand-logo {
+    filter: drop-shadow(0 6px 18px rgba(223, 186, 115, 0.28));
   }
   .nav .spacer { display: block; flex: 1; }
   .nav-profile {

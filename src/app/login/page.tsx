@@ -1,9 +1,9 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { login } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 import Reveal from "@/components/Reveal";
+import BrandLogo from "@/components/BrandLogo";
 
 export const metadata = { title: "Entrar · Tab-NuevaVida" };
 
@@ -14,21 +14,14 @@ export default async function LoginPage() {
       <Reveal selector=".auth-card, .auth-card .field, .auth-card .btn">
       <section className="card auth-card stack">
         <div>
-          <Image
-            src="/logo.png"
-            alt="Tab-NuevaVida"
-            width={240}
-            height={58}
-            priority
+          <BrandLogo
             style={{
               width: "100%",
               maxWidth: "230px",
               height: "auto",
-              display: "block",
-              borderRadius: "8px",
               marginBottom: "1rem",
-              boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-              border: "1px solid rgba(0,0,0,0.06)",
+              borderRadius: "10px",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
             }}
           />
           <h1>Bienvenido</h1>

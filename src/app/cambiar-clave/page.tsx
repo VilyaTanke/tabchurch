@@ -1,10 +1,10 @@
-import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { changePassword, logout } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 import Reveal from "@/components/Reveal";
 import RoleBadge from "@/components/RoleBadge";
+import BrandLogo from "@/components/BrandLogo";
 
 export const metadata = { title: "Cambiar contraseña · Tab-NuevaVida" };
 
@@ -15,21 +15,14 @@ export default async function ChangePasswordPage() {
       <Reveal selector=".auth-card, .auth-card .field, .auth-card .btn">
         <section className="card auth-card stack">
           <div>
-            <Image
-              src="/logo.png"
-              alt="Tab-NuevaVida"
-              width={240}
-              height={58}
-              priority
+            <BrandLogo
               style={{
                 width: "100%",
                 maxWidth: "230px",
                 height: "auto",
-                display: "block",
-                borderRadius: "8px",
                 marginBottom: "1rem",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.12)",
-                border: "1px solid rgba(0,0,0,0.06)",
+                borderRadius: "10px",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
               }}
             />
             <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>

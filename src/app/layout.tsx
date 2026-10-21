@@ -1,8 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit } from "next/font/google";
+import { Outfit, Cinzel } from "next/font/google";
 import "./globals.css";
 
 const outfit = Outfit({ variable: "--font-sans", subsets: ["latin"] });
+const cinzel = Cinzel({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+});
 
 export const metadata: Metadata = {
   title: "Tab-NuevaVida · Cifrados para tu grupo",
@@ -27,7 +32,7 @@ import PwaManager from "@/components/PwaManager";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={outfit.variable}>
+    <html lang="es" className={`${outfit.variable} ${cinzel.variable}`}>
       <body>
         <PwaManager />
         {children}
