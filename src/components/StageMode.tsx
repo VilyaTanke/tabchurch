@@ -254,7 +254,12 @@ export default function StageMode({
             <strong>Notas:</strong> {song.notes}
           </div>
         )}
-        <SongBody content={transposedContent} showChords={showChords} size={size} />
+        <SongBody
+          content={transposedContent}
+          showChords={showChords}
+          size={size}
+          twoColumns={twoColumns}
+        />
       </main>
 
       {/* Barra de navegación inferior entre canciones */}

@@ -69,7 +69,8 @@ export type Line =
   | { type: "lyrics"; segments: Segment[] }
   | { type: "comment"; text: string }
   | { type: "chorus"; open: boolean }
-  | { type: "blank" };
+  | { type: "blank" }
+  | { type: "section_break"; text?: string };
 
 const DIRECTIVE_RE = /^\{\s*([a-z_]+)\s*(?::\s*(.*?))?\s*\}$/i;
 
@@ -89,8 +90,25 @@ export function parseChordPro(content: string): Line[] {
       else if (name === "eoc" || name === "end_of_chorus") out.push({ type: "chorus", open: false });
       else if (name === "c" || name === "comment" || name === "sov" || name === "start_of_verse")
         out.push({ type: "comment", text: d[2] ?? (name.startsWith("s") ? "Verso" : "") });
+      else if (
+        name === "colb" ||
+        name === "column_break" ||
+        name === "page_break" ||
+        name === "np" ||
+        name === "new_page" ||
+        name === "salto" ||
+        name === "salto_seccion"
+      ) {
+        out.push({ type: "section_break", text: d[2] || undefined });
+      }
       continue; // title/key/etc. se ignoran en el cuerpo
     }
+
+    if (/^---{2,}$|^==={2,}$/.test(line.trim())) {
+      out.push({ type: "section_break" });
+      continue;
+    }
+
     const segments: Segment[] = [];
     const re = /\[([^\]]*)\]/g;
     let last = 0;
@@ -108,6 +126,93 @@ export function parseChordPro(content: string): Line[] {
     out.push({ type: "lyrics", segments: clean });
   }
   return out;
+}
+
+/**
+ * Detecta si una línea corresponde al inicio de una sección (Intro, Verso, Coro, Puente, etc.)
+ */
+export function isSectionHeaderLine(line: Line): boolean {
+  if (line.type === "comment") return true;
+  if (line.type === "lyrics") {
+    if (line.segments.length === 1 && line.segments[0].chord && !isChord(line.segments[0].chord)) {
+      return true;
+    }
+    if (
+      line.segments.length > 0 &&
+      line.segments[0].chord &&
+      /^(intro|verso|coro|puente|pre-coro|estrofa|outro|solo|final|interludio)/i.test(
+        line.segments[0].chord.trim(),
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Divide las líneas de una canción en bloques equilibrados para el modo 2 columnas.
+ * Evita que la 2ª columna muestre el final de la canción y permite que
+ * la parte superior tenga 2 columnas (inicio y coro), y la inferior
+ * 2 columnas (con el resto de la canción).
+ */
+export function partitionSongLines(lines: Line[], targetLinesPerBlock = 30): Line[][] {
+  // 1. Si hay saltos de sección explícitos ({colb}, {salto}, etc.)
+  const hasExplicitBreaks = lines.some((l) => l.type === "section_break");
+  if (hasExplicitBreaks) {
+    const blocks: Line[][] = [];
+    let current: Line[] = [];
+    for (const l of lines) {
+      if (l.type === "section_break") {
+        if (current.length) blocks.push(current);
+        current = [];
+      } else {
+        current.push(l);
+      }
+    }
+    if (current.length) blocks.push(current);
+    return blocks.length ? blocks : [lines];
+  }
+
+  // 2. Conteo de líneas de contenido real
+  const totalContentLines = lines.filter((l) => l.type !== "blank").length;
+
+  // Si la canción es corta (<= 32 líneas), 1 solo bloque de 2 columnas basta y cabe de inmediato
+  if (totalContentLines <= 32) {
+    return [lines];
+  }
+
+  // Canciones medianas / largas: dividir en bloques equilibrados (mínimo 2 bloques: superior e inferior)
+  const numBlocks = Math.max(2, Math.round(totalContentLines / targetLinesPerBlock));
+  const targetPerBlock = Math.ceil(totalContentLines / numBlocks);
+
+  const blocks: Line[][] = [];
+  let currentBlock: Line[] = [];
+  let currentCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    currentBlock.push(line);
+    if (line.type !== "blank") currentCount++;
+
+    // Verificar si es un punto natural para el salto de sección
+    if (blocks.length < numBlocks - 1 && currentCount >= targetPerBlock - 4) {
+      const isBlank = line.type === "blank";
+      const nextIsHeader = i + 1 < lines.length && isSectionHeaderLine(lines[i + 1]);
+
+      if (isBlank || nextIsHeader || currentCount >= targetPerBlock + 6) {
+        blocks.push(currentBlock);
+        currentBlock = [];
+        currentCount = 0;
+      }
+    }
+  }
+
+  if (currentBlock.length) {
+    blocks.push(currentBlock);
+  }
+
+  return blocks;
 }
 
 /**

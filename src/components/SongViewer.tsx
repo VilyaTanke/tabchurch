@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { animate } from "animejs";
-import { isChord, keyPrefersFlats, parseChordPro, semitonesBetween, transposeContent, transposeKey } from "@/lib/chordpro";
+import {
+  isChord,
+  keyPrefersFlats,
+  parseChordPro,
+  partitionSongLines,
+  semitonesBetween,
+  transposeContent,
+  transposeKey,
+} from "@/lib/chordpro";
 import {
   SlidersHorizontal,
   Save,
@@ -31,41 +39,72 @@ export function SongBody({
   hideTabs?: boolean;
 }) {
   const lines = useMemo(() => parseChordPro(content), [content]);
+  const blocks = useMemo(() => {
+    if (!twoColumns) return [lines];
+    return partitionSongLines(lines);
+  }, [lines, twoColumns]);
+
   let inChorus = false;
   return (
-    <div className={`song ${twoColumns ? "two-cols" : ""}`} style={{ fontSize: size }}>
-      {lines.map((l, i) => {
-        if (l.type === "chorus") { inChorus = l.open; return null; }
-        if (l.type === "blank") return <div key={i} className="song-gap" />;
-        if (l.type === "comment") return <div key={i} className="song-comment">{l.text}</div>;
-
-        // Ocultar líneas de tablatura típica de guitarra (ej: e|---, B|---, G|---, D|---, etc.)
-        if (hideTabs) {
-          const rawText = l.segments.map((s) => s.text).join("");
-          if (/^[eEaAdDgGbB1-6]\|[-0-9pbrh~/\s|]+/.test(rawText.trim()) || /^[-\s|0-9pbrh~]{10,}$/.test(rawText.trim())) {
-            return null;
-          }
-        }
-
-        const hasChords = showChords && l.segments.some((s) => s.chord);
-        const hasLyrics = l.segments.some((s) => s.text && s.text.trim().length > 0);
-        return (
-          <div key={i} className={`song-line ${inChorus ? "chorus" : ""} ${!hasLyrics ? "chord-only" : ""}`}>
-            {l.segments.map((s, j) => (
-              <span key={j} className="seg">
-                {hasChords && (
-                  <span className={`chord ${s.chord && !isChord(s.chord) ? "raw" : ""}`}>{s.chord || "\u00a0"}</span>
-                )}
-                {hasLyrics ? (
-                  <span className="lyr">{s.text || (s.chord ? "\u00a0" : "")}</span>
-                ) : s.text ? (
-                  <span className="chord-spacer">{s.text}</span>
-                ) : null}
+    <div className={`song ${twoColumns ? "has-columns" : ""}`} style={{ fontSize: size }}>
+      {blocks.map((blockLines, blockIdx) => (
+        <div key={blockIdx} className="song-section-chunk">
+          {blockIdx > 0 && (
+            <div className="song-section-divider">
+              <span className="song-divider-badge">
+                <ScrollText size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                Parte {blockIdx + 1}
               </span>
-            ))}
+            </div>
+          )}
+          <div className={`song-block ${twoColumns ? "two-cols" : ""}`}>
+            {blockLines.map((l, i) => {
+              if (l.type === "chorus") {
+                inChorus = l.open;
+                return null;
+              }
+              if (l.type === "blank") return <div key={i} className="song-gap" />;
+              if (l.type === "comment") return <div key={i} className="song-comment">{l.text}</div>;
+              if (l.type === "section_break") return null;
+
+              // Ocultar líneas de tablatura típica de guitarra (ej: e|---, B|---, G|---, D|---, etc.)
+              if (hideTabs) {
+                const rawText = l.segments.map((s) => s.text).join("");
+                if (
+                  /^[eEaAdDgGbB1-6]\|[-0-9pbrh~/\s|]+/.test(rawText.trim()) ||
+                  /^[-\s|0-9pbrh~]{10,}$/.test(rawText.trim())
+                ) {
+                  return null;
+                }
+              }
+
+              const hasChords = showChords && l.segments.some((s) => s.chord);
+              const hasLyrics = l.segments.some((s) => s.text && s.text.trim().length > 0);
+              return (
+                <div
+                  key={i}
+                  className={`song-line ${inChorus ? "chorus" : ""} ${!hasLyrics ? "chord-only" : ""}`}
+                >
+                  {l.segments.map((s, j) => (
+                    <span key={j} className="seg">
+                      {hasChords && (
+                        <span className={`chord ${s.chord && !isChord(s.chord) ? "raw" : ""}`}>
+                          {s.chord || "\u00a0"}
+                        </span>
+                      )}
+                      {hasLyrics ? (
+                        <span className="lyr">{s.text || (s.chord ? "\u00a0" : "")}</span>
+                      ) : s.text ? (
+                        <span className="chord-spacer">{s.text}</span>
+                      ) : null}
+                    </span>
+                  ))}
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
