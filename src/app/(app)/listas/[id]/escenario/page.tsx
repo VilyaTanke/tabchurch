@@ -25,6 +25,7 @@ export default async function SetlistStagePage({
   }
 
   const songs = items.map((it) => ({
+    itemId: it.id,
     id: it.song.id,
     title: it.song.title,
     artist: it.song.artist,

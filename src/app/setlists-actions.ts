@@ -130,4 +130,46 @@ export async function setItemKey(setlistId: number, itemId: number, key: string 
     .where(and(eq(schema.setlistItems.id, itemId), eq(schema.setlistItems.setlistId, setlistId)))
     .run();
   revalidatePath(`/listas/${setlistId}`);
+  revalidatePath(`/listas/${setlistId}/escenario`);
+}
+
+export async function updateSetlistItemConfig(
+  setlistId: number,
+  itemId: number,
+  data: { keyOverride?: string | null; notes?: string | null }
+) {
+  await canModify(setlistId);
+  const updates: { keyOverride?: string | null; notes?: string | null } = {};
+  if ("keyOverride" in data) updates.keyOverride = data.keyOverride || null;
+  if ("notes" in data) updates.notes = data.notes?.trim() || null;
+
+  db.update(schema.setlistItems)
+    .set(updates)
+    .where(and(eq(schema.setlistItems.id, itemId), eq(schema.setlistItems.setlistId, setlistId)))
+    .run();
+
+  revalidatePath(`/listas/${setlistId}`);
+  revalidatePath(`/listas/${setlistId}/escenario`);
+  return { ok: true };
+}
+
+export async function saveAllSetlistItems(
+  setlistId: number,
+  items: Array<{ id: number; keyOverride?: string | null; notes?: string | null }>
+) {
+  await canModify(setlistId);
+  db.transaction((tx) => {
+    for (const it of items) {
+      tx.update(schema.setlistItems)
+        .set({
+          keyOverride: it.keyOverride || null,
+          notes: it.notes !== undefined ? (it.notes?.trim() || null) : undefined,
+        })
+        .where(and(eq(schema.setlistItems.id, it.id), eq(schema.setlistItems.setlistId, setlistId)))
+        .run();
+    }
+  });
+  revalidatePath(`/listas/${setlistId}`);
+  revalidatePath(`/listas/${setlistId}/escenario`);
+  return { ok: true };
 }

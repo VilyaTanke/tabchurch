@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   isChord,
@@ -17,11 +17,16 @@ import {
   SunMedium,
   ChevronLeft,
   ChevronRight,
+  FileMusic,
+  Save,
+  Check,
 } from "lucide-react";
 import { SongBody } from "@/components/SongViewer";
+import { updateSetlistItemConfig } from "@/app/setlists-actions";
 
 type StageSong = {
   id: number;
+  itemId?: number;
   title: string;
   artist: string | null;
   originalKey: string | null;
@@ -44,9 +49,12 @@ export default function StageMode({
   const [index, setIndex] = useState(0);
   const [size, setSize] = useState(22);
   const [showChords, setShowChords] = useState(true);
+  const [hideTabs, setHideTabs] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(0); // 0 = off, 1 = lento, 2 = normal, 3 = rapido
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [twoColumns, setTwoColumns] = useState(false);
+  const [isSaving, startSave] = useTransition();
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   const song = songs[index];
 
@@ -62,7 +70,20 @@ export default function StageMode({
   // Reiniciar offset al cambiar de canción
   useEffect(() => {
     setStepOffset(0);
+    setSavedSuccess(false);
   }, [index]);
+
+  const handleSaveToSetlist = () => {
+    if (!song?.itemId || !currentKey) return;
+    startSave(async () => {
+      await updateSetlistItemConfig(setlistId, song.itemId!, {
+        keyOverride: currentKey,
+      });
+      song.keyOverride = currentKey;
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    });
+  };
 
   const totalSteps = initialSteps + stepOffset;
   const flat = keyPrefersFlats(transposeKey(song?.originalKey, totalSteps) ?? undefined);
@@ -186,6 +207,25 @@ export default function StageMode({
             >
               +
             </button>
+            {song.itemId && (
+              <button
+                className={`stage-btn small ${savedSuccess ? "active" : ""}`}
+                onClick={handleSaveToSetlist}
+                disabled={isSaving}
+                title="Guardar tono de esta canción en la lista personalizada"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  marginLeft: "0.2rem",
+                  color: savedSuccess ? "#10b981" : undefined,
+                  borderColor: savedSuccess ? "#10b981" : undefined,
+                }}
+              >
+                {savedSuccess ? <Check size={13} /> : <Save size={13} />}
+                <span>{savedSuccess ? "Guardado" : "Guardar tono"}</span>
+              </button>
+            )}
           </div>
 
           <div className="stage-group">
@@ -211,6 +251,16 @@ export default function StageMode({
             title="Alternar cifrado/letra"
           >
             {showChords ? "Acordes" : "Solo letra"}
+          </button>
+
+          <button
+            className={`stage-btn small ${hideTabs ? "active" : ""}`}
+            onClick={() => setHideTabs((h) => !h)}
+            title={hideTabs ? "Mostrar tablaturas" : "Ocultar tablaturas de guitarra"}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+          >
+            <FileMusic size={14} />
+            <span>{hideTabs ? "Sin Tabs" : "Tabs"}</span>
           </button>
 
           <button
@@ -259,6 +309,7 @@ export default function StageMode({
           showChords={showChords}
           size={size}
           twoColumns={twoColumns}
+          hideTabs={hideTabs}
         />
       </main>
 

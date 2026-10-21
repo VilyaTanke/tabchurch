@@ -9,58 +9,152 @@ import {
   SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus } from "lucide-react";
+import { GripVertical, Trash2, Plus, FileText, Save, Check } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import {
-  addSongToSetlist, removeSetlistItem, reorderSetlist, setItemKey,
+  addSongToSetlist,
+  removeSetlistItem,
+  reorderSetlist,
+  setItemKey,
+  updateSetlistItemConfig,
+  saveAllSetlistItems,
 } from "@/app/setlists-actions";
 
 export type Item = {
-  id: number; songId: number; title: string; artist: string | null;
-  originalKey: string | null; keyOverride: string | null;
+  id: number;
+  songId: number;
+  title: string;
+  artist: string | null;
+  originalKey: string | null;
+  keyOverride: string | null;
+  notes?: string | null;
 };
 export type LibSong = { id: number; title: string; artist: string | null };
 
 function Row({
-  item, onRemove, onKey,
-}: { item: Item; onRemove: () => void; onKey: (k: string) => void }) {
+  item,
+  setlistId,
+  onRemove,
+  onKey,
+  onNotes,
+}: {
+  item: Item;
+  setlistId: number;
+  onRemove: () => void;
+  onKey: (k: string) => void;
+  onNotes: (n: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const [showNotes, setShowNotes] = useState(Boolean(item.notes));
+  const [saved, setSaved] = useState(false);
+  const [isSaving, startSave] = useTransition();
+
+  const handleSave = () => {
+    startSave(async () => {
+      await updateSetlistItemConfig(setlistId, item.id, {
+        keyOverride: item.keyOverride,
+        notes: item.notes,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    });
+  };
+
   return (
     <li
       ref={setNodeRef}
       className={`sl-row ${isDragging ? "dragging" : ""}`}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        flexDirection: "column",
+        alignItems: "stretch",
+        gap: "0.4rem",
+      }}
     >
-      <button
-        className="drag-handle"
-        aria-label={`Mover ${item.title}`}
-        {...attributes}
-        {...listeners}
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
-      >
-        <GripVertical size={16} />
-      </button>
-      <div className="grow" style={{ minWidth: 0 }}>
-        <strong className="ellipsis">{item.title}</strong>
-        <div className="muted ellipsis" style={{ fontSize: "0.85rem" }}>{item.artist || "Sin artista"}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", width: "100%" }}>
+        <button
+          className="drag-handle"
+          aria-label={`Mover ${item.title}`}
+          {...attributes}
+          {...listeners}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <GripVertical size={16} />
+        </button>
+        <div className="grow" style={{ minWidth: 0 }}>
+          <strong className="ellipsis">{item.title}</strong>
+          <div className="muted ellipsis" style={{ fontSize: "0.85rem" }}>{item.artist || "Sin artista"}</div>
+        </div>
+
+        <button
+          type="button"
+          className={`btn small ${showNotes || item.notes ? "active" : ""}`}
+          onClick={() => setShowNotes((s) => !s)}
+          title="Notas e indicaciones para el grupo"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.5rem" }}
+        >
+          <FileText size={13} />
+          <span style={{ fontSize: "0.75rem" }}>{item.notes ? "Nota" : "+Nota"}</span>
+        </button>
+
+        <select
+          className="input key-select"
+          aria-label="Tono en esta lista"
+          value={item.keyOverride ?? item.originalKey ?? ""}
+          onChange={(e) => onKey(e.target.value)}
+        >
+          <option value="">—</option>
+          {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+        </select>
+
+        <button
+          type="button"
+          className="btn small"
+          onClick={handleSave}
+          disabled={isSaving}
+          title="Guardar configuración de esta canción"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            color: saved ? "#10b981" : undefined,
+            borderColor: saved ? "#10b981" : undefined,
+            padding: "0 0.55rem",
+          }}
+        >
+          {saved ? <Check size={13} /> : <Save size={13} />}
+          <span style={{ fontSize: "0.78rem" }}>{saved ? "Listo" : "Guardar"}</span>
+        </button>
+
+        <button
+          className="btn danger small"
+          onClick={onRemove}
+          aria-label={`Quitar ${item.title}`}
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 0.5rem" }}
+        >
+          <Trash2 size={13} />
+        </button>
       </div>
-      <select
-        className="input key-select"
-        aria-label="Tono en esta lista"
-        value={item.keyOverride ?? item.originalKey ?? ""}
-        onChange={(e) => onKey(e.target.value)}
-      >
-        <option value="">—</option>
-        {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
-      </select>
-      <button
-        className="btn danger small"
-        onClick={onRemove}
-        aria-label={`Quitar ${item.title}`}
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 0.5rem" }}
-      >
-        <Trash2 size={13} />
-      </button>
+
+      {showNotes && (
+        <div style={{ paddingLeft: "2.1rem", width: "100%" }}>
+          <input
+            type="text"
+            className="input"
+            style={{
+              minHeight: "34px",
+              height: "34px",
+              fontSize: "0.82rem",
+              background: "#f8fafc",
+              padding: "0 0.65rem",
+            }}
+            placeholder="Indicaciones para esta canción (ej: Intro solo piano, Bajar en coro 2...)"
+            value={item.notes ?? ""}
+            onChange={(e) => onNotes(e.target.value)}
+          />
+        </div>
+      )}
     </li>
   );
 }
@@ -71,6 +165,9 @@ export default function SetlistEditor({
   const [items, setItems] = useState(initial);
   const [q, setQ] = useState("");
   const [, start] = useTransition();
+  const [isSavingAll, startSaveAll] = useTransition();
+  const [allSaved, setAllSaved] = useState(false);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
@@ -90,10 +187,46 @@ export default function SetlistEditor({
     start(() => reorderSetlist(setlistId, next.map((i) => i.id)));
   }
 
+  const handleSaveAll = () => {
+    startSaveAll(async () => {
+      await saveAllSetlistItems(
+        setlistId,
+        items.map((it) => ({
+          id: it.id,
+          keyOverride: it.keyOverride,
+          notes: it.notes,
+        }))
+      );
+      setAllSaved(true);
+      setTimeout(() => setAllSaved(false), 2500);
+    });
+  };
+
   return (
     <div className="grid two" style={{ alignItems: "start" }}>
       <section className="card stack">
-        <h2>Orden del servicio ({items.length})</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+          <h2>Orden del servicio ({items.length})</h2>
+          {items.length > 0 && (
+            <button
+              type="button"
+              className="btn small"
+              onClick={handleSaveAll}
+              disabled={isSavingAll}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                color: allSaved ? "#10b981" : undefined,
+                borderColor: allSaved ? "#10b981" : undefined,
+              }}
+              title="Guardar todas las configuraciones de las canciones"
+            >
+              {allSaved ? <Check size={14} /> : <Save size={14} />}
+              <span>{allSaved ? "Todo guardado" : "Guardar todo"}</span>
+            </button>
+          )}
+        </div>
         {items.length === 0 && <p className="muted">Añade canciones desde la biblioteca →</p>}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
@@ -102,6 +235,7 @@ export default function SetlistEditor({
                 <Row
                   key={it.id}
                   item={it}
+                  setlistId={setlistId}
                   onRemove={() => {
                     setItems((l) => l.filter((x) => x.id !== it.id));
                     start(() => removeSetlistItem(setlistId, it.id));
@@ -109,6 +243,9 @@ export default function SetlistEditor({
                   onKey={(k) => {
                     setItems((l) => l.map((x) => (x.id === it.id ? { ...x, keyOverride: k || null } : x)));
                     start(() => setItemKey(setlistId, it.id, k));
+                  }}
+                  onNotes={(n) => {
+                    setItems((l) => l.map((x) => (x.id === it.id ? { ...x, notes: n } : x)));
                   }}
                 />
               ))}

@@ -38,6 +38,7 @@ export default async function SetlistDetailPage({
     artist: it.song.artist,
     originalKey: it.song.currentKey || it.song.originalKey,
     keyOverride: it.keyOverride,
+    notes: it.itemNotes || "",
   }));
 
   return (
