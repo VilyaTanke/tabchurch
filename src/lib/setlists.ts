@@ -30,6 +30,7 @@ export function getSetlistItems(setlistId: number) {
       position: schema.setlistItems.position,
       keyOverride: schema.setlistItems.keyOverride,
       itemNotes: schema.setlistItems.notes,
+      twoColumns: schema.setlistItems.twoColumns,
       song: schema.songs,
     })
     .from(schema.setlistItems)

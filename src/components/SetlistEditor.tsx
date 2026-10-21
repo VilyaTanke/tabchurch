@@ -9,7 +9,7 @@ import {
   SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus, FileText, Save, Check } from "lucide-react";
+import { GripVertical, Trash2, Plus, FileText, Save, Check, Columns2 } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import {
   addSongToSetlist,
@@ -28,6 +28,7 @@ export type Item = {
   originalKey: string | null;
   keyOverride: string | null;
   notes?: string | null;
+  twoColumns?: boolean;
 };
 export type LibSong = { id: number; title: string; artist: string | null };
 
@@ -37,12 +38,14 @@ function Row({
   onRemove,
   onKey,
   onNotes,
+  onTwoColumns,
 }: {
   item: Item;
   setlistId: number;
   onRemove: () => void;
   onKey: (k: string) => void;
   onNotes: (n: string) => void;
+  onTwoColumns: (val: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [showNotes, setShowNotes] = useState(Boolean(item.notes));
@@ -54,6 +57,7 @@ function Row({
       await updateSetlistItemConfig(setlistId, item.id, {
         keyOverride: item.keyOverride,
         notes: item.notes,
+        twoColumns: item.twoColumns,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -107,6 +111,17 @@ function Row({
           <option value="">—</option>
           {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
+
+        <button
+          type="button"
+          className={`btn small ${item.twoColumns ? "active" : ""}`}
+          onClick={() => onTwoColumns(!item.twoColumns)}
+          title={item.twoColumns ? "Modo escenario: 2 columnas (click para 1 col)" : "Modo escenario: 1 columna (click para 2 cols)"}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0 0.5rem" }}
+        >
+          <Columns2 size={13} />
+          <span style={{ fontSize: "0.75rem" }}>{item.twoColumns ? "2 Cols" : "1 Col"}</span>
+        </button>
 
         <button
           type="button"
@@ -195,6 +210,7 @@ export default function SetlistEditor({
           id: it.id,
           keyOverride: it.keyOverride,
           notes: it.notes,
+          twoColumns: it.twoColumns,
         }))
       );
       setAllSaved(true);
@@ -246,6 +262,9 @@ export default function SetlistEditor({
                   }}
                   onNotes={(n) => {
                     setItems((l) => l.map((x) => (x.id === it.id ? { ...x, notes: n } : x)));
+                  }}
+                  onTwoColumns={(val) => {
+                    setItems((l) => l.map((x) => (x.id === it.id ? { ...x, twoColumns: val } : x)));
                   }}
                 />
               ))}

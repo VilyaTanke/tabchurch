@@ -67,4 +67,5 @@ export const setlistItems = sqliteTable("setlist_items", {
   position: integer("position").notNull(),
   keyOverride: text("key_override"),
   notes: text("notes"),
+  twoColumns: integer("two_columns").notNull().default(0),
 });

@@ -35,6 +35,7 @@ export default async function SetlistStagePage({
     contentChordpro: it.song.contentChordpro,
     notes: it.itemNotes || it.song.notes,
     tempo: it.song.tempo,
+    twoColumns: Boolean(it.twoColumns),
   }));
 
   return (

@@ -39,6 +39,7 @@ export default async function SetlistDetailPage({
     originalKey: it.song.currentKey || it.song.originalKey,
     keyOverride: it.keyOverride,
     notes: it.itemNotes || "",
+    twoColumns: Boolean(it.twoColumns),
   }));
 
   return (

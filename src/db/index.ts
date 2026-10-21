@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS setlist_items (
   song_id INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
   position INTEGER NOT NULL,
   key_override TEXT,
-  notes TEXT
+  notes TEXT,
+  two_columns INTEGER NOT NULL DEFAULT 0
 );
 `;
 
@@ -75,6 +76,11 @@ function init() {
   sqlite.exec(DDL);
   try {
     sqlite.exec("ALTER TABLE songs ADD COLUMN current_key TEXT;");
+  } catch {
+    // Columna ya existe
+  }
+  try {
+    sqlite.exec("ALTER TABLE setlist_items ADD COLUMN two_columns INTEGER NOT NULL DEFAULT 0;");
   } catch {
     // Columna ya existe
   }

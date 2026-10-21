@@ -136,12 +136,13 @@ export async function setItemKey(setlistId: number, itemId: number, key: string 
 export async function updateSetlistItemConfig(
   setlistId: number,
   itemId: number,
-  data: { keyOverride?: string | null; notes?: string | null }
+  data: { keyOverride?: string | null; notes?: string | null; twoColumns?: number | boolean }
 ) {
   await canModify(setlistId);
-  const updates: { keyOverride?: string | null; notes?: string | null } = {};
+  const updates: { keyOverride?: string | null; notes?: string | null; twoColumns?: number } = {};
   if ("keyOverride" in data) updates.keyOverride = data.keyOverride || null;
   if ("notes" in data) updates.notes = data.notes?.trim() || null;
+  if ("twoColumns" in data) updates.twoColumns = data.twoColumns ? 1 : 0;
 
   db.update(schema.setlistItems)
     .set(updates)
@@ -155,16 +156,18 @@ export async function updateSetlistItemConfig(
 
 export async function saveAllSetlistItems(
   setlistId: number,
-  items: Array<{ id: number; keyOverride?: string | null; notes?: string | null }>
+  items: Array<{ id: number; keyOverride?: string | null; notes?: string | null; twoColumns?: number | boolean }>
 ) {
   await canModify(setlistId);
   db.transaction((tx) => {
     for (const it of items) {
+      const updates: { keyOverride?: string | null; notes?: string | null; twoColumns?: number } = {};
+      if ("keyOverride" in it) updates.keyOverride = it.keyOverride || null;
+      if ("notes" in it) updates.notes = it.notes !== undefined ? (it.notes?.trim() || null) : undefined;
+      if ("twoColumns" in it) updates.twoColumns = it.twoColumns ? 1 : 0;
+
       tx.update(schema.setlistItems)
-        .set({
-          keyOverride: it.keyOverride || null,
-          notes: it.notes !== undefined ? (it.notes?.trim() || null) : undefined,
-        })
+        .set(updates)
         .where(and(eq(schema.setlistItems.id, it.id), eq(schema.setlistItems.setlistId, setlistId)))
         .run();
     }

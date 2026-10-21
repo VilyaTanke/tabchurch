@@ -35,6 +35,7 @@ type StageSong = {
   contentChordpro: string;
   notes: string | null;
   tempo: number | null;
+  twoColumns?: boolean;
 };
 
 export default function StageMode({
@@ -52,7 +53,7 @@ export default function StageMode({
   const [hideTabs, setHideTabs] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(0); // 0 = off, 1 = lento, 2 = normal, 3 = rapido
   const [wakeLockActive, setWakeLockActive] = useState(false);
-  const [twoColumns, setTwoColumns] = useState(false);
+  const [twoColumns, setTwoColumns] = useState(() => Boolean(songs[0]?.twoColumns));
   const [isSaving, startSave] = useTransition();
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -67,19 +68,22 @@ export default function StageMode({
 
   const [stepOffset, setStepOffset] = useState(0);
 
-  // Reiniciar offset al cambiar de canción
+  // Reiniciar offset y cargar dos columnas al cambiar de canción
   useEffect(() => {
     setStepOffset(0);
     setSavedSuccess(false);
-  }, [index]);
+    setTwoColumns(Boolean(songs[index]?.twoColumns));
+  }, [index, songs]);
 
   const handleSaveToSetlist = () => {
-    if (!song?.itemId || !currentKey) return;
+    if (!song?.itemId) return;
     startSave(async () => {
       await updateSetlistItemConfig(setlistId, song.itemId!, {
-        keyOverride: currentKey,
+        keyOverride: currentKey || undefined,
+        twoColumns: twoColumns ? 1 : 0,
       });
       song.keyOverride = currentKey;
+      song.twoColumns = twoColumns;
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
     });
@@ -207,25 +211,6 @@ export default function StageMode({
             >
               +
             </button>
-            {song.itemId && (
-              <button
-                className={`stage-btn small ${savedSuccess ? "active" : ""}`}
-                onClick={handleSaveToSetlist}
-                disabled={isSaving}
-                title="Guardar tono de esta canción en la lista personalizada"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                  marginLeft: "0.2rem",
-                  color: savedSuccess ? "#10b981" : undefined,
-                  borderColor: savedSuccess ? "#10b981" : undefined,
-                }}
-              >
-                {savedSuccess ? <Check size={13} /> : <Save size={13} />}
-                <span>{savedSuccess ? "Guardado" : "Guardar tono"}</span>
-              </button>
-            )}
           </div>
 
           <div className="stage-group">
@@ -275,12 +260,39 @@ export default function StageMode({
 
           <button
             className={`stage-btn small ${twoColumns ? "active" : ""}`}
-            onClick={() => setTwoColumns((c) => !c)}
-            title="2 Columnas (tablets / pantalla ancha)"
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+            onClick={() => {
+              setTwoColumns((c) => {
+                const next = !c;
+                if (song) song.twoColumns = next;
+                return next;
+              });
+            }}
+            title={twoColumns ? "Visualización en 2 columnas activada (click para 1 col)" : "Visualización en 1 columna (click para 2 cols)"}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
           >
-            <Columns2 size={16} />
+            <Columns2 size={15} />
+            <span>{twoColumns ? "2 Cols" : "1 Col"}</span>
           </button>
+
+          {song.itemId && (
+            <button
+              className={`stage-btn small ${savedSuccess ? "active" : ""}`}
+              onClick={handleSaveToSetlist}
+              disabled={isSaving}
+              title="Guardar tono y columnas de esta canción en la lista personalizada"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                color: savedSuccess ? "#10b981" : "#b45309",
+                borderColor: savedSuccess ? "#10b981" : "#f59e0b",
+                fontWeight: 600,
+              }}
+            >
+              {savedSuccess ? <Check size={14} /> : <Save size={14} />}
+              <span>{savedSuccess ? "Guardado" : "Guardar config"}</span>
+            </button>
+          )}
 
           {wakeLockActive && (
             <span
