@@ -30,9 +30,9 @@ maxHeight = h*.9
 minHeight = h*.5;
 maxSpeed = 35;
 minSpeed = 6;
-hue = 230;
-hueDif = 50; // Hue +/-
-glow = 10; // Set to 0 for better performance
+hue = 42;
+hueDif = 8; // Hue +/-
+glow = 12; // Set to 0 for better performance
 ctx.globalCompositeOperation = "lighter";
 
 function pushDots(num){
@@ -53,13 +53,13 @@ function render(){
   for(i=1; i<dots.length; i++){
     ctx.beginPath();
     grd = ctx.createLinearGradient(dots[i].x, dots[i].y, dots[i].x+dots[i].w, dots[i].y+dots[i].h);
-    grd.addColorStop(.0, "hsla("+dots[i].c+",50%,50%,.0)");
-    grd.addColorStop(.2, "hsla("+dots[i].c+20+",50%,50%,.5)");
-    grd.addColorStop(.5, "hsla("+dots[i].c+50+",70%,60%,.8)");
-    grd.addColorStop(.8, "hsla("+dots[i].c+80+",50%,50%,.5)");
-    grd.addColorStop(1., "hsla("+(dots[i].c+100)+",50%,50%,.0)");
+    grd.addColorStop(.0, "hsla("+dots[i].c+",75%,45%,.0)");
+    grd.addColorStop(.2, "hsla("+(dots[i].c)+",78%,52%,.45)");
+    grd.addColorStop(.5, "hsla("+(dots[i].c+3)+",88%,66%,.85)");
+    grd.addColorStop(.8, "hsla("+(dots[i].c)+",75%,50%,.45)");
+    grd.addColorStop(1., "hsla("+(dots[i].c-4)+",70%,42%,.0)");
     ctx.shadowBlur = glow;
-    ctx.shadowColor = "hsla("+(dots[i].c)+",50%,50%,1)";
+    ctx.shadowColor = "hsla("+(dots[i].c)+",85%,55%,.8)";
     ctx.fillStyle=grd;
     ctx.fillRect(dots[i].x,dots[i].y,dots[i].w,dots[i].h);
     ctx.closePath();
