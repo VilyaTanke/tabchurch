@@ -15,6 +15,46 @@
   --ok: #0d9488;
   --radius: 16px;
   --nav-h: 68px;
+
+  /* ---------- Variables del Sistema de Lectura y Escalado Adaptativo ---------- */
+  --reading-scale: 1;
+  --touch-target-min: 42px;
+  --sl-title-size: 1.05rem;
+  --sl-meta-size: 0.86rem;
+  --sl-btn-size: 0.86rem;
+  --sl-btn-h: 38px;
+  --sl-row-pad: 0.85rem 1rem;
+}
+
+/* Modo Cómodo: Activo automáticamente en Tablets y pantallas táctiles medianas */
+[data-reading-scale="comfort"],
+[data-device="tablet"] {
+  --reading-scale: 1.15;
+  --touch-target-min: 46px;
+  --sl-title-size: 1.18rem;
+  --sl-meta-size: 0.95rem;
+  --sl-btn-size: 0.92rem;
+  --sl-btn-h: 44px;
+  --sl-row-pad: 1rem 1.25rem;
+}
+
+/* Modo Atril / Grande: Lectura a distancia en escenario / ensayos */
+[data-reading-scale="large"] {
+  --reading-scale: 1.3;
+  --touch-target-min: 50px;
+  --sl-title-size: 1.32rem;
+  --sl-meta-size: 1.05rem;
+  --sl-btn-size: 1rem;
+  --sl-btn-h: 48px;
+  --sl-row-pad: 1.15rem 1.4rem;
+}
+
+/* Optimización para dispositivos táctiles (puntero grueso) */
+@media (hover: none) and (pointer: coarse) {
+  :root {
+    --touch-target-min: 44px;
+    --sl-btn-h: 44px;
+  }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -348,7 +388,101 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   filter: drop-shadow(0 0 6px rgba(223, 186, 115, 0.5));
 }
 
-@media (min-width: 768px) {
+/* ---------- TABLET PORTRAIT (768px a 1023px) ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .nav {
+    top: 0; right: auto; bottom: 0; width: 76px; height: auto;
+    flex-direction: column; justify-content: flex-start; align-items: center;
+    gap: 0.5rem; padding: 1.25rem 0.35rem;
+    border-top: 0;
+    border-right: 1px solid rgba(212, 175, 55, 0.16);
+    background: linear-gradient(180deg, #161514 0%, #0d0c0b 100%);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+  .nav .brand { display: none; }
+  .nav .brand-link {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+    padding: 0.2rem;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+  }
+  .brand-logo, .brand-img {
+    width: 44px;
+    height: auto;
+    border-radius: 8px;
+  }
+  .nav .spacer { display: block; flex: 1; }
+  .nav-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.2rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(212, 175, 55, 0.22);
+    border-radius: 10px;
+    margin-bottom: 0.4rem;
+    width: 100%;
+  }
+  .nav-profile-name { display: none; }
+  .nav-link {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    padding: 0.55rem 0.25rem;
+    color: #a89f91;
+    border-radius: 10px;
+    position: relative;
+    border: 1px solid transparent;
+    width: 100%;
+    text-align: center;
+  }
+  .nav-link:hover {
+    color: #fae7be;
+    background: rgba(223, 186, 115, 0.08);
+  }
+  .nav-link.active {
+    color: #fae7be;
+    font-weight: 600;
+    background: rgba(223, 186, 115, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: linear-gradient(180deg, #fae7be 0%, #dfba73 50%, #c5983d 100%);
+  }
+  .nav button.nav-link {
+    color: #a89f91;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    padding: 0.55rem 0.25rem;
+  }
+  .main {
+    margin-left: 76px;
+    max-width: none;
+    padding: 1.5rem 1.5rem;
+  }
+  .main > * {
+    max-width: 100%;
+  }
+}
+
+/* ---------- DESKTOP & TABLET LANDSCAPE (>= 1024px) ---------- */
+@media (min-width: 1024px) {
   .nav {
     top: 0; right: auto; bottom: 0; width: 220px; height: auto;
     flex-direction: column; justify-content: flex-start; align-items: stretch;
@@ -461,11 +595,11 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
     border-color: rgba(239, 68, 68, 0.2);
   }
   .main { margin-left: 220px; max-width: none; padding: 2rem 2.5rem; }
-  .main > * { max-width: 1000px; }
+  .main > * { max-width: 1200px; }
 }
 
 .grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 800px) { .grid.two { grid-template-columns: 1fr 1fr; } }
 
 .user-row {
   display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
@@ -603,21 +737,301 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .chip.alt { background: var(--surface-2); color: var(--text); border-color: var(--border); font-weight: 500; }
 .chip:active { transform: scale(0.93); }
 
-/* ---------- Listas & Drag and Drop ---------- */
-.sl-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+/* ---------- Listas & Setlist Editor Adaptativo ---------- */
+.sl-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .sl-editor-grid {
+    grid-template-columns: minmax(460px, 1.42fr) minmax(320px, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Selector Segmentado de Pestañas (Activo en Tablet Portrait y Móvil) */
+.sl-segmented-tabs {
+  display: flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.sl-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-size: var(--sl-btn-size);
+  font-weight: 600;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: var(--sl-btn-h);
+}
+
+.sl-tab-btn.active {
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Visibilidad de columnas en Tablet Portrait / Móvil vs Desktop / Landscape */
+@media (max-width: 1023px) {
+  .sl-col-order,
+  .sl-col-add {
+    display: none;
+  }
+  .sl-col-order.active-tab,
+  .sl-col-add.active-tab {
+    display: flex;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sl-segmented-tabs {
+    display: none; /* En pantallas anchas ambos paneles coexisten simultáneamente */
+  }
+  .sl-col-order,
+  .sl-col-add {
+    display: flex !important;
+  }
+}
+
+.sl-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .sl-row {
-  display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;
-  background: #ffffff; border: 1px solid var(--border); border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  padding: var(--sl-row-pad);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
-.sl-row.dragging { opacity: 0.6; border-color: var(--primary); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15); }
-.drag-handle {
-  background: none; border: 0; color: var(--muted); font-size: 1.25rem;
-  cursor: grab; padding: 0.2rem 0.4rem; border-radius: 6px;
+
+.sl-row:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
-.drag-handle:active { cursor: grabbing; color: var(--text); }
-.key-select { width: 90px; min-height: 38px; padding: 0 0.5rem; font-size: 0.85rem; }
+
+.sl-row.dragging {
+  opacity: 0.6;
+  border-color: var(--primary);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.2);
+}
+
+/* Cabecera del ítem de la lista: Drag handle + Título/Artista + Botón Eliminar */
+.sl-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.sl-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: grab;
+  padding: 0.35rem;
+  border-radius: 8px;
+  min-width: 36px;
+  min-height: var(--sl-btn-h);
+  transition: color 0.15s, background 0.15s;
+}
+
+.sl-drag-handle:active {
+  cursor: grabbing;
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.sl-row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sl-row-title {
+  font-size: var(--sl-title-size);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sl-row-artist {
+  font-size: var(--sl-meta-size);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.sl-btn-remove {
+  min-height: var(--sl-btn-h);
+  padding: 0 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* Barra de Acciones del ítem (Nota, Tono, Columnas, Guardar) */
+.sl-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding-left: 3rem;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .sl-row-actions {
+    padding-left: 0;
+  }
+}
+
+.sl-key-wrapper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 0.35rem 0 0.65rem;
+  min-height: var(--sl-btn-h);
+  gap: 0.35rem;
+}
+
+.sl-key-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.key-select {
+  border: 0;
+  background: transparent;
+  font-weight: 700;
+  font-size: var(--sl-btn-size);
+  color: var(--accent);
+  cursor: pointer;
+  outline: none;
+  width: auto;
+  min-width: 65px;
+  height: 100%;
+  padding: 0 0.2rem;
+}
+
+.sl-action-btn {
+  min-height: var(--sl-btn-h);
+  padding: 0 0.75rem;
+  font-size: var(--sl-btn-size);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.sl-action-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: var(--primary);
+}
+
+.sl-row-notes {
+  padding-left: 3rem;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .sl-row-notes {
+    padding-left: 0;
+  }
+}
+
+.sl-notes-input {
+  width: 100%;
+  min-height: var(--sl-btn-h);
+  font-size: var(--sl-meta-size);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.sl-notes-input:focus {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Ítems de la Biblioteca en "Añadir Canción" */
+.sl-library-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: var(--sl-row-pad);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.12s, border-color 0.15s;
+}
+
+.sl-library-row:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.sl-btn-add {
+  min-height: var(--sl-btn-h);
+  padding: 0 1.1rem;
+  font-size: var(--sl-btn-size);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  font-weight: 700;
+}
 
 /* ---------- Modo Escenario Fullscreen ---------- */
 .stage-wrap {

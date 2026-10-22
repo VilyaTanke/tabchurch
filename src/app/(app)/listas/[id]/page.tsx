@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { deleteSetlist, updateSetlist } from "@/app/setlists-actions";
 import SetlistEditor from "@/components/SetlistEditor";
 import PrintButton from "@/components/PrintButton";
+import ReadingScaleControl from "@/components/ReadingScaleControl";
 import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
 
 export default async function SetlistDetailPage({
@@ -86,6 +87,7 @@ export default async function SetlistDetailPage({
               <PrintButton label="Imprimir Lista / PDF" />
             </>
           )}
+          <ReadingScaleControl />
           <form action={deleteSetlist}>
             <input type="hidden" name="id" value={list.id} />
             <button

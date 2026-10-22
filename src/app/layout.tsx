@@ -29,11 +29,13 @@ export const viewport: Viewport = {
 };
 
 import PwaManager from "@/components/PwaManager";
+import DeviceDetector from "@/components/DeviceDetector";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${outfit.variable} ${cinzel.variable}`}>
       <body>
+        <DeviceDetector />
         <PwaManager />
         {children}
       </body>
