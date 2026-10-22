@@ -15,16 +15,7 @@ export default async function ChangePasswordPage() {
       <Reveal selector=".auth-card, .auth-card .field, .auth-card .btn">
         <section className="card auth-card stack">
           <div>
-            <BrandLogo
-              style={{
-                width: "100%",
-                maxWidth: "230px",
-                height: "auto",
-                marginBottom: "1rem",
-                borderRadius: "10px",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-              }}
-            />
+            <BrandLogo className="auth-logo" />
             <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
               <span>Hola, {user.name}</span>
               <RoleBadge role={user.role} />

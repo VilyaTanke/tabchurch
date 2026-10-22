@@ -14,16 +14,7 @@ export default async function LoginPage() {
       <Reveal selector=".auth-card, .auth-card .field, .auth-card .btn">
       <section className="card auth-card stack">
         <div>
-          <BrandLogo
-            style={{
-              width: "100%",
-              maxWidth: "230px",
-              height: "auto",
-              marginBottom: "1rem",
-              borderRadius: "10px",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-            }}
-          />
+          <BrandLogo className="auth-logo" />
           <h1>Bienvenido</h1>
           <p className="muted">Entra con la cuenta que te dio tu administrador.</p>
         </div>
