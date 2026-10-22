@@ -4,6 +4,7 @@ import { login } from "@/app/actions";
 import ActionForm, { Field } from "@/components/ActionForm";
 import Reveal from "@/components/Reveal";
 import BrandLogo from "@/components/BrandLogo";
+import LiquidLoginBackground from "@/components/LiquidLoginBackground";
 
 export const metadata = { title: "Entrar · Tab-NuevaVida" };
 
@@ -11,6 +12,7 @@ export default async function LoginPage() {
   if (await getUser()) redirect("/");
   return (
     <main className="auth-wrap">
+      <LiquidLoginBackground />
       <Reveal selector=".auth-card, .auth-card .field, .auth-card .btn">
         <section className="card auth-card stack">
           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>

@@ -199,16 +199,13 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 75% 55% at 50% -12%, rgba(223, 186, 115, 0.18) 0%, transparent 65%),
-    radial-gradient(ellipse 60% 45% at 50% 112%, rgba(197, 152, 61, 0.1) 0%, transparent 65%),
-    linear-gradient(180deg, #161514 0%, #0d0c0b 100%);
+  background: #0d0c0b;
 }
 .auth-wrap::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 1;
   background:
     radial-gradient(circle at 15% 30%, rgba(212, 175, 55, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 85% 70%, rgba(212, 175, 55, 0.04) 0%, transparent 45%);
@@ -217,15 +214,16 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .auth-card {
   width: min(440px, 100%);
   padding: 2.5rem 2.25rem;
-  background: linear-gradient(180deg, rgba(22, 21, 20, 0.94) 0%, rgba(13, 12, 11, 0.98) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: linear-gradient(180deg, rgba(20, 18, 17, 0.88) 0%, rgba(11, 10, 9, 0.94) 100%);
+  border: 1px solid rgba(212, 175, 55, 0.28);
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.65),
-    0 0 1px rgba(212, 175, 55, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    0 24px 60px rgba(0, 0, 0, 0.78),
+    0 0 50px rgba(0, 0, 0, 0.65),
+    0 0 1px rgba(212, 175, 55, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   border-radius: 24px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   position: relative;
 }
 .auth-card::before {
@@ -345,12 +343,14 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   padding: 0.65rem 0.9rem;
   font-size: 0.88rem;
 }
-.auth-wrap > div { width: min(440px, 100vw - 3rem); }
-.auth-wrap > div .auth-card { width: 100%; }
-@media (min-width: 900px) {
-  .auth-wrap { animation: drift 24s ease-in-out infinite alternate; background-size: 108%; }
+.auth-wrap > div:not(.liquid-bg-container) {
+  width: min(440px, 100vw - 3rem);
+  position: relative;
+  z-index: 2;
 }
-@keyframes drift { from { background-position: 45% 50%; } to { background-position: 55% 52%; } }
+.auth-wrap > div:not(.liquid-bg-container) .auth-card {
+  width: 100%;
+}
 
 /* ---------- App shell: móvil = barra inferior, tablet = barra lateral ---------- */
 .shell { min-height: 100dvh; background: var(--bg); }
