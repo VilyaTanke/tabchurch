@@ -121,7 +121,7 @@ export default function ReadingScaleControl() {
                     padding: "0.6rem 0.75rem",
                     borderRadius: "10px",
                     border: "0",
-                    background: active ? "rgba(99, 102, 241, 0.1)" : "transparent",
+                    background: active ? "rgba(223, 186, 115, 0.15)" : "transparent",
                     color: active ? "var(--primary)" : "var(--text)",
                     cursor: "pointer",
                     textAlign: "left",

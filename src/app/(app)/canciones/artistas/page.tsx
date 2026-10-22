@@ -120,7 +120,7 @@ export default async function ArtistsPage({
 
       {/* Si hay un artista seleccionado, mostrar sus canciones primero con opción de volver */}
       {artist && (
-        <section className="card stack" style={{ border: "1px solid var(--primary)", background: "rgba(139, 123, 255, 0.05)" }}>
+        <section className="card stack" style={{ border: "1px solid rgba(212, 175, 55, 0.4)", background: "rgba(223, 186, 115, 0.08)" }}>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <div>
               <span className="muted" style={{ fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>

@@ -85,7 +85,7 @@ export default function SongEditor({ song }: { song?: Song }) {
 
       {/* Importador Rápido por URL */}
       {!song?.id && (
-        <section className="card stack" style={{ background: "rgba(139, 123, 255, 0.08)", borderColor: "rgba(139, 123, 255, 0.3)" }}>
+        <section className="card stack" style={{ background: "rgba(223, 186, 115, 0.08)", borderColor: "rgba(212, 175, 55, 0.3)" }}>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <div>
               <strong style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
