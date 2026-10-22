@@ -12,6 +12,7 @@ import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
 import { getUserGroups } from "@/lib/groups";
 import RoleBadge from "@/components/RoleBadge";
+import UserAvatar from "@/components/UserAvatar";
 
 export default async function Home() {
   const user = await requireUser();
@@ -43,12 +44,17 @@ export default async function Home() {
   return (
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
-            <span>Hola, {user.name}</span>
-            <RoleBadge role={user.role} size="lg" />
-          </h1>
-          <p className="muted">Panel principal de alabanza y acordes.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+          <Link href="/perfil" title="Editar foto de perfil" style={{ display: "inline-block", transition: "transform 0.2s ease" }} className="hover-scale">
+            <UserAvatar src={user.avatar} name={user.name} size="lg" />
+          </Link>
+          <div>
+            <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+              <span>Hola, {user.name}</span>
+              <RoleBadge role={user.role} size="lg" />
+            </h1>
+            <p className="muted">Panel principal de alabanza y acordes.</p>
+          </div>
         </div>
         <div className="row">
           {canManageSongs(user) && (

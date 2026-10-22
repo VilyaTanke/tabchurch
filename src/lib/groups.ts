@@ -52,6 +52,7 @@ export function getGroupMembers(groupId: number) {
       userId: schema.users.id,
       name: schema.users.name,
       username: schema.users.username,
+      avatar: schema.users.avatar,
       role: schema.groupMembers.role,
     })
     .from(schema.groupMembers)

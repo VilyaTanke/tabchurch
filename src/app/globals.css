@@ -1294,3 +1294,304 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .text-left {
   text-align: left;
 }
+
+/* ==========================================================================
+   SISTEMA DE AVATARES Y PERFIL DE USUARIO (3D CHIBI & LUXURY OBSIDIAN)
+   ========================================================================== */
+
+/* Componente Base de Avatar */
+.user-avatar-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  background: var(--surface-2);
+  user-select: none;
+}
+.user-avatar-wrap.with-border {
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 10px rgba(223, 186, 115, 0.15);
+}
+.user-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.hover-scale {
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.06);
+  filter: drop-shadow(0 4px 12px rgba(223, 186, 115, 0.35));
+}
+
+/* Ajustes de navegación para perfil */
+.nav-profile-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  gap: 0.4rem;
+}
+.nav-profile:hover {
+  background: rgba(223, 186, 115, 0.12);
+  border-color: rgba(212, 175, 55, 0.45);
+  transform: translateY(-1px);
+}
+.nav-link.nav-link-profile .user-avatar-wrap {
+  box-shadow: 0 0 6px rgba(223, 186, 115, 0.4);
+  border: 1.5px solid rgba(223, 186, 115, 0.7);
+}
+
+/* Página de Perfil: Layout Responsive */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (min-width: 860px) {
+  .profile-grid {
+    grid-template-columns: 400px 1fr;
+    gap: 1.75rem;
+  }
+}
+
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Tarjeta del Editor de Avatar (Inspirado en la Referencia) */
+.avatar-editor-card {
+  background: linear-gradient(180deg, #1c1a18 0%, #121110 100%);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35), 0 0 1px rgba(212, 175, 55, 0.3);
+  color: #fae7be;
+}
+.avatar-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+}
+.avatar-editor-header h2 {
+  color: #fae7be;
+  font-weight: 700;
+}
+
+/* Escenario de Vista Previa Circular */
+.avatar-preview-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem 0 0.75rem;
+}
+.avatar-preview-ring {
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  border: 3.5px solid #dfba73;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(223, 186, 115, 0.35),
+    inset 0 0 15px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+  background: #102a27;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.avatar-preview-viewport {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.avatar-preview-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 50%;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Barra de Controles: Zoom y Giro */
+.avatar-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  border-radius: 12px;
+}
+.avatar-control-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+.avatar-slider {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  height: 4px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+.avatar-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fae7be, #dfba73);
+  box-shadow: 0 0 8px rgba(223, 186, 115, 0.6);
+  cursor: pointer;
+  border: 1px solid #1a1918;
+}
+.avatar-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fae7be, #dfba73);
+  box-shadow: 0 0 8px rgba(223, 186, 115, 0.6);
+  cursor: pointer;
+  border: 1px solid #1a1918;
+}
+
+.avatar-rotate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  color: #fae7be;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.avatar-rotate-btn:hover {
+  background: rgba(223, 186, 115, 0.12);
+  border-color: #dfba73;
+  transform: translateY(-1px);
+}
+
+/* Divisor "o elige un avatar" */
+.avatar-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 0.6rem 0 0.25rem;
+}
+.avatar-divider::before,
+.avatar-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+.avatar-divider span {
+  padding: 0 0.8rem;
+  font-size: 0.85rem;
+  color: #a89f91;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Cuadrícula de Avatares (2 filas x 4 columnas) */
+.avatar-options-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem 0.65rem;
+  justify-items: center;
+  padding: 0.35rem 0;
+}
+.avatar-choice-btn {
+  position: relative;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  padding: 2px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+}
+.avatar-choice-btn:hover {
+  transform: scale(1.12);
+}
+.avatar-choice-btn.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2.5px #3b82f6, 0 4px 14px rgba(59, 130, 246, 0.45);
+  transform: scale(1.08);
+}
+.avatar-choice-thumb {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e1e1e;
+}
+.avatar-thumb-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Badge de Checkmark en la Esquina Superior/Inferior Derecha */
+.avatar-selected-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Inputs Deshabilitados con estilo sobrio */
+.input.disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.9;
+  border-style: dashed;
+}
+

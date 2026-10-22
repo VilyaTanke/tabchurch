@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="shell">
       <Nav
         isAdmin={user.role === "admin"}
-        user={{ name: user.name, role: user.role }}
+        user={{ name: user.name, role: user.role, avatar: user.avatar }}
       />
       <main className="main">
         <Reveal onRoute>{children}</Reveal>

@@ -14,6 +14,7 @@ import {
 } from "@/app/groups-actions";
 import ActionForm from "@/components/ActionForm";
 import GroupMemberActions from "@/components/GroupMemberActions";
+import UserAvatar from "@/components/UserAvatar";
 
 export default async function GroupDetailPage({
   params,
@@ -175,12 +176,15 @@ export default async function GroupDetailPage({
           <div className="stack" style={{ gap: "0.5rem" }}>
             {members.map((m) => (
               <div key={m.userId} className="sl-row" style={{ justifyContent: "space-between" }}>
-                <div>
-                  <strong>{m.name}</strong> <span className="muted">@{m.username}</span>
-                  <div style={{ marginTop: "2px" }}>
-                    <span className={`badge ${m.role === "owner" ? "admin" : ""}`}>
-                      {roleLabel[m.role] || m.role}
-                    </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <UserAvatar src={m.avatar} name={m.name} size="sm" />
+                  <div>
+                    <strong>{m.name}</strong> <span className="muted">@{m.username}</span>
+                    <div style={{ marginTop: "2px" }}>
+                      <span className={`badge ${m.role === "owner" ? "admin" : ""}`}>
+                        {roleLabel[m.role] || m.role}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

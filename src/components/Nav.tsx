@@ -4,15 +4,17 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
-import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, type LucideIcon } from "lucide-react";
+import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, UserCircle, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/actions";
 import RoleBadge from "@/components/RoleBadge";
 import BrandLogo from "@/components/BrandLogo";
+import UserAvatar from "@/components/UserAvatar";
 
 type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  isProfile?: boolean;
 };
 
 const links: NavItem[] = [
@@ -27,14 +29,17 @@ export default function Nav({
   user,
 }: {
   isAdmin: boolean;
-  user?: { name: string; role: string };
+  user?: { name: string; role: string; avatar?: string | null };
 }) {
   const path = usePathname();
   const ref = useRef<HTMLElement>(null);
   const first = useRef(true);
-  const all: NavItem[] = isAdmin
-    ? [...links, { href: "/admin", label: "Admin", icon: ShieldCheck }]
-    : links;
+
+  const all: NavItem[] = [
+    ...links,
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
+    { href: "/perfil", label: "Perfil", icon: UserCircle, isProfile: true },
+  ];
   const active = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
 
   useEffect(() => {
@@ -68,10 +73,19 @@ export default function Nav({
       </Link>
       {all.map((l) => {
         const Icon = l.icon;
+        const isActive = active(l.href);
         return (
-          <Link key={l.href} href={l.href} className={`nav-link ${active(l.href) ? "active" : ""}`}>
+          <Link
+            key={l.href}
+            href={l.href}
+            className={`nav-link ${isActive ? "active" : ""} ${l.isProfile ? "nav-link-profile" : ""}`}
+          >
             <span className="ico" aria-hidden>
-              <Icon size={18} strokeWidth={2.2} />
+              {l.isProfile && user?.avatar ? (
+                <UserAvatar src={user.avatar} name={user.name} size="xs" border={false} />
+              ) : (
+                <Icon size={18} strokeWidth={2.2} />
+              )}
             </span>
             {l.label}
           </Link>
@@ -79,12 +93,15 @@ export default function Nav({
       })}
       <span className="spacer" />
       {user && (
-        <div className="nav-profile">
-          <span className="nav-profile-name" title={user.name}>
-            {user.name}
-          </span>
-          <RoleBadge role={user.role} />
-        </div>
+        <Link href="/perfil" className="nav-profile" title="Ver y editar mi perfil">
+          <UserAvatar src={user.avatar} name={user.name} size="sm" />
+          <div className="nav-profile-details">
+            <span className="nav-profile-name" title={user.name}>
+              {user.name}
+            </span>
+            <RoleBadge role={user.role} />
+          </div>
+        </Link>
       )}
       <form action={logout}>
         <button className="nav-link" style={{ width: "100%" }}>

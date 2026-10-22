@@ -12,6 +12,7 @@ export const users = sqliteTable("users", {
   role: text("role", { enum: ["admin", "editor", "user"] }).notNull().default("user"),
   mustChangePw: integer("must_change_pw", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
+  avatar: text("avatar"),
   createdAt: integer("created_at").notNull().default(now),
 });
 

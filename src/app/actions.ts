@@ -133,3 +133,27 @@ export async function updateUser(_: FormState, form: FormData): Promise<FormStat
   revalidatePath("/admin");
   return { ok: `Usuario «${username}» actualizado correctamente.` };
 }
+
+export async function updateProfile(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const name = String(form.get("name") ?? "").trim();
+  const email = String(form.get("email") ?? "").trim() || null;
+  const avatar = String(form.get("avatar") ?? "").trim() || null;
+
+  if (!name) return { error: "El nombre es obligatorio" };
+
+  db.update(schema.users)
+    .set({
+      name,
+      email,
+      avatar,
+    })
+    .where(eq(schema.users.id, user.id))
+    .run();
+
+  revalidatePath("/", "layout");
+  revalidatePath("/perfil");
+  revalidatePath("/admin");
+  return { ok: "Tu perfil ha sido actualizado correctamente." };
+}
+

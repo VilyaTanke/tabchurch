@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { resetPassword, toggleUserActive, updateUser } from "@/app/actions";
 import RoleBadge from "@/components/RoleBadge";
+import UserAvatar from "@/components/UserAvatar";
 
 export type AdminUser = {
   id: number;
@@ -21,6 +22,7 @@ export type AdminUser = {
   email: string | null;
   role: string;
   active: boolean;
+  avatar?: string | null;
 };
 
 type Props = {
@@ -205,17 +207,20 @@ export default function UserRow({ user, currentUserId }: Props) {
 
   return (
     <div className="user-row">
-      <div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
-          <strong>{user.name}</strong> <span className="muted">@{user.username}</span>
-          <RoleBadge role={user.role} />
-          {!user.active && <span className="badge off">desactivado</span>}
-        </div>
-        {user.email && (
-          <div className="muted" style={{ fontSize: "0.85rem", marginTop: "0.15rem" }}>
-            {user.email}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <UserAvatar src={user.avatar} name={user.name} size="md" />
+        <div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+            <strong>{user.name}</strong> <span className="muted">@{user.username}</span>
+            <RoleBadge role={user.role} />
+            {!user.active && <span className="badge off">desactivado</span>}
           </div>
-        )}
+          {user.email && (
+            <div className="muted" style={{ fontSize: "0.85rem", marginTop: "0.15rem" }}>
+              {user.email}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
