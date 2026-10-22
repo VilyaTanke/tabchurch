@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mic2, UserMinus, LogOut, Plus } from "lucide-react";
+import { ArrowLeft, Mic2, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import {
   getGroupDetails,
@@ -11,10 +11,9 @@ import {
 import {
   addMemberToGroup,
   createGroupSetlist,
-  removeGroupMember,
-  updateMemberRole,
 } from "@/app/groups-actions";
-import ActionForm, { Field } from "@/components/ActionForm";
+import ActionForm from "@/components/ActionForm";
+import GroupMemberActions from "@/components/GroupMemberActions";
 
 export default async function GroupDetailPage({
   params,
@@ -24,6 +23,8 @@ export default async function GroupDetailPage({
   const user = await requireUser();
   const { id } = await params;
   const groupId = Number(id);
+
+  if (isNaN(groupId)) notFound();
 
   const group = getGroupDetails(groupId);
   if (!group) notFound();
@@ -183,51 +184,13 @@ export default async function GroupDetailPage({
                   </div>
                 </div>
 
-                <div className="row">
-                  {isOwner && m.userId !== user.id && m.role !== "owner" && (
-                    <>
-                      <form action={updateMemberRole}>
-                        <input type="hidden" name="groupId" value={groupId} />
-                        <input type="hidden" name="userId" value={m.userId} />
-                        <select
-                          name="role"
-                          className="input"
-                          style={{ minHeight: "34px", fontSize: "0.8rem", padding: "0 0.5rem" }}
-                          defaultValue={m.role}
-                          onChange={(e) => e.target.form?.requestSubmit()}
-                        >
-                          <option value="member">Lector</option>
-                          <option value="editor">Editor</option>
-                        </select>
-                      </form>
-
-                      <form action={removeGroupMember}>
-                        <input type="hidden" name="groupId" value={groupId} />
-                        <input type="hidden" name="userId" value={m.userId} />
-                        <button
-                          className="btn danger small"
-                          title="Quitar del grupo"
-                          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 0.5rem" }}
-                        >
-                          <UserMinus size={13} />
-                        </button>
-                      </form>
-                    </>
-                  )}
-                  {m.userId === user.id && m.role !== "owner" && (
-                    <form action={removeGroupMember}>
-                      <input type="hidden" name="groupId" value={groupId} />
-                      <input type="hidden" name="userId" value={m.userId} />
-                      <button
-                        className="btn ghost small"
-                        style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                      >
-                        <LogOut size={13} />
-                        <span>Salir del grupo</span>
-                      </button>
-                    </form>
-                  )}
-                </div>
+                <GroupMemberActions
+                  groupId={groupId}
+                  memberId={m.userId}
+                  memberRole={m.role}
+                  currentUserId={user.id}
+                  isOwner={isOwner}
+                />
               </div>
             ))}
           </div>

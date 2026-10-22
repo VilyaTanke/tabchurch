@@ -84,6 +84,11 @@ function init() {
   } catch {
     // Columna ya existe
   }
+  try {
+    sqlite.exec("ALTER TABLE setlists ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE;");
+  } catch {
+    // Columna ya existe
+  }
   const db = drizzle(sqlite, { schema });
 
   // Seed del primer administrador (debe cambiar la clave al entrar).
