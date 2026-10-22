@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
+function importModule(url: string): Promise<any> {
+  // Use new Function so TypeScript does not attempt static module resolution at build time
+  return new Function("u", "return import(u)")(url);
+}
+
 export default function LiquidLoginBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -18,13 +23,11 @@ export default function LiquidLoginBackground() {
         let LiquidBackgroundModule: any;
         try {
           // Attempt local vendor file first
-          LiquidBackgroundModule = await import(
-            /* webpackIgnore: true */ "/vendor/liquid1.min.js"
-          );
+          LiquidBackgroundModule = await importModule("/vendor/liquid1.min.js");
         } catch {
           // Fallback to CDN
-          LiquidBackgroundModule = await import(
-            /* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/threejs-components@0.0.27/build/backgrounds/liquid1.min.js"
+          LiquidBackgroundModule = await importModule(
+            "https://cdn.jsdelivr.net/npm/threejs-components@0.0.27/build/backgrounds/liquid1.min.js"
           );
         }
 
