@@ -41,6 +41,56 @@ export async function loadAudioBuffer(url: string, ctx: AudioContext): Promise<A
 }
 
 /**
+ * Calibra y bloquea la instancia de SoundTouch para evitar aceleración y clicks:
+ * 1. Desactiva quickSeek (búsqueda estéreo completa con correlación exacta sin micro-desfases).
+ * 2. Calibra la frecuencia de muestreo del hardware (ej. 48000 Hz) para sincronizar ventanas WSOLA.
+ * 3. Bloquea el flujo Transposer -> Stretch: en soundtouchjs, cuando rate > 1.0 (subir de tono),
+ *    por defecto ejecuta stretch antes de transposer, lo cual trunca muestras fraccionales en cada bloque
+ *    y acelera el tempo. Al fijar Transposer -> Stretch, el ratio de velocidad es EXACTAMENTE 1.00000
+ *    en todos los semitonos (-12 a +12).
+ */
+function configureSoundTouchInstance(
+  st: SoundTouch,
+  sampleRate: number,
+  semitones = 0,
+  tempo = 1.0
+): void {
+  st.stretch.quickSeek = false;
+  st.stretch.setParameters(sampleRate, 0, 0, 0);
+
+  const originalCalc = st.calculateEffectiveRateAndTempo.bind(st);
+  st.calculateEffectiveRateAndTempo = function () {
+    originalCalc();
+    this.transposer.inputBuffer = this._inputBuffer;
+    this.transposer.outputBuffer = this._intermediateBuffer;
+    this.stretch.inputBuffer = this._intermediateBuffer;
+    this.stretch.outputBuffer = this._outputBuffer;
+  };
+  st.process = function () {
+    this.transposer.process();
+    this.stretch.process();
+  };
+
+  st.pitchSemitones = semitones;
+  st.tempo = tempo;
+  st.calculateEffectiveRateAndTempo();
+}
+
+/**
+ * Limitador suave continuo C1: si la señal excede ±1.0 (ej. al sumar varios stems o transitorios),
+ * comprime suavemente los picos sin ninguna discontinuidad de voltaje (evita clicks y pops digitales).
+ */
+function softLimit(val: number): number {
+  if (val > 1.0) {
+    return 1.0 + Math.tanh(val - 1.0) * 0.15;
+  }
+  if (val < -1.0) {
+    return -1.0 + Math.tanh(val + 1.0) * 0.15;
+  }
+  return val;
+}
+
+/**
  * Canal de audio individual con SoundTouch (WSOLA DSP):
  * Permite cambiar la tonalidad (semitonos) en tiempo real SIN alterar la velocidad de reproducción.
  */
@@ -67,11 +117,7 @@ export class SoundTouchChannel {
     this.ctx = ctx;
     this.buffer = buffer;
     this.soundTouch = new SoundTouch();
-    // Calibrar frecuencia de muestreo exacta del hardware (ej. 48000 Hz) y activar máxima precisión sin clicks
-    this.soundTouch.stretch.quickSeek = false;
-    this.soundTouch.stretch.setParameters(this.ctx.sampleRate, 0, 0, 0);
-    this.soundTouch.pitchSemitones = 0;
-    this.soundTouch.tempo = 1.0;
+    configureSoundTouchInstance(this.soundTouch, this.ctx.sampleRate, 0, 1.0);
 
     this.source = new WebAudioBufferSource(buffer);
     this.filter = new SimpleFilter(this.source, this.soundTouch, () => {
@@ -105,9 +151,9 @@ export class SoundTouchChannel {
       for (let i = 0; i < frames; i++) {
         const l = this.samples[i * 2];
         const r = this.samples[i * 2 + 1];
-        // Soft clipping analógico para evitar distorsión o clicks
-        left[i] = l > 1 ? Math.tanh(l) : l < -1 ? Math.tanh(l) : l;
-        right[i] = r > 1 ? Math.tanh(r) : r < -1 ? Math.tanh(r) : r;
+        // Limitador analógico suave continuo C1 (sin saltos bruscos ni clicks)
+        left[i] = softLimit(l);
+        right[i] = softLimit(r);
       }
       for (let i = frames; i < this.bufferSize; i++) {
         left[i] = 0;
@@ -130,12 +176,11 @@ export class SoundTouchChannel {
    * Cambia la tonalidad en semitonos (-12 a +12)
    * ¡IMPORTANTE! SoundTouch cambia el tono mediante algoritmo WSOLA conservando exactamente
    * la velocidad original (tempo = 1.0), sin acelerar ni ralentizar la canción.
+   * NO reseteamos filter.sourcePosition para no perder muestras ni producir saltos o clicks.
    */
   setSemitones(semitones: number) {
-    const curPos = this.filter.sourcePosition;
     this.soundTouch.pitchSemitones = semitones;
     this.soundTouch.tempo = this.currentTempo;
-    this.filter.sourcePosition = curPos;
   }
 
   /** Permite ajustar la velocidad de reproducción de manera independiente al tono. */
@@ -257,11 +302,7 @@ export class MultiTrackSoundTouchEngine {
         const buffer = await loadAudioBuffer(spec.url, this.ctx);
         const source = new WebAudioBufferSource(buffer);
         const soundTouch = new SoundTouch();
-        // Calibrar frecuencia de muestreo exacta del hardware y desactivar quickSeek para evitar clicks
-        soundTouch.stretch.quickSeek = false;
-        soundTouch.stretch.setParameters(this.ctx.sampleRate, 0, 0, 0);
-        soundTouch.pitchSemitones = this.currentSemitones;
-        soundTouch.tempo = this.currentTempo;
+        configureSoundTouchInstance(soundTouch, this.ctx.sampleRate, this.currentSemitones, this.currentTempo);
 
         const filter = new SimpleFilter(source, soundTouch);
         const samples = new Float32Array(this.bufferSize * 2);
@@ -331,12 +372,10 @@ export class MultiTrackSoundTouchEngine {
         return;
       }
 
-      // Soft-clipping analógico suave: previene distorsión armónica o clicks por saturación
+      // Limitador analógico suave continuo C1: previene distorsión armónica o clicks por saturación
       for (let i = 0; i < maxFrames; i++) {
-        const l = left[i];
-        const r = right[i];
-        left[i] = l > 1 ? Math.tanh(l) : l < -1 ? Math.tanh(l) : l;
-        right[i] = r > 1 ? Math.tanh(r) : r < -1 ? Math.tanh(r) : r;
+        left[i] = softLimit(left[i]);
+        right[i] = softLimit(right[i]);
       }
 
       const songElapsed = (maxFrames / this.ctx.sampleRate) * this.currentTempo;
@@ -373,14 +412,13 @@ export class MultiTrackSoundTouchEngine {
   /**
    * Cambia la tonalidad en semitonos (-12 a +12).
    * Mediante WSOLA en SoundTouch, el pitch sube o baja de forma limpia SIN modificar la velocidad (tempo).
+   * NO reseteamos ch.filter.sourcePosition para no perder muestras ni producir saltos o clicks.
    */
   setSemitones(semitones: number): void {
     this.currentSemitones = semitones;
     for (const ch of this.channels) {
-      const curPos = ch.filter.sourcePosition;
       ch.soundTouch.pitchSemitones = semitones;
       ch.soundTouch.tempo = this.currentTempo;
-      ch.filter.sourcePosition = curPos;
     }
   }
 

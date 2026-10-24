@@ -24,14 +24,18 @@ const q: QueueState = (g.__stemsQueue ??= { initialized: false, running: null, c
 const SCRIPT = path.join(process.cwd(), "scripts", "separate_stems.py");
 
 /** Localiza el intérprete de Python: STEMS_PYTHON > .venv-stems del proyecto > python del sistema. */
-export function resolvePython() {
+export function resolvePython(): string {
   if (process.env.STEMS_PYTHON) return process.env.STEMS_PYTHON;
-  const venv = path.join(
-    process.cwd(),
-    ".venv-stems",
-    process.platform === "win32" ? path.join("Scripts", "python.exe") : path.join("bin", "python"),
-  );
-  if (fs.existsSync(venv)) return venv;
+  // Construcción dinámica para evitar que Turbopack analice estáticamente la carpeta .venv-stems
+  // y falle por los symlinks de Linux apuntando fuera del proyecto (/usr/bin/python3).
+  const venvDir = [process.cwd(), [".", "venv", "-stems"].join("")].join(path.sep);
+  const exe = process.platform === "win32" ? ["Scripts", "python.exe"] : ["bin", "python"];
+  const venv = [venvDir, ...exe].join(path.sep);
+  try {
+    if (fs.existsSync(venv)) return venv;
+  } catch {
+    // Si no se puede verificar, continuar al fallback
+  }
   return process.platform === "win32" ? "python" : "python3";
 }
 
@@ -129,7 +133,14 @@ async function run(trackId: number) {
   setStatus(trackId, { stemsStatus: "processing", stemsProgress: 1, stemsError: null, stemsList: null });
 
   const python = resolvePython();
-  const args = [SCRIPT, "--input", input, "--output", outDir, "--model", model];
+  const args = [
+    SCRIPT,
+    "--input", input,
+    "--output", outDir,
+    "--model", model,
+    "--overlap", "0.5",
+    "--shifts", "1",
+  ];
   if (process.env.STEMS_DEVICE) args.push("--device", process.env.STEMS_DEVICE);
   if (process.env.STEMS_THREADS) args.push("--threads", process.env.STEMS_THREADS);
 

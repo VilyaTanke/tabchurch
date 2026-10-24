@@ -1,7 +1,24 @@
 declare module "soundtouchjs" {
+  export interface FifoBuffer {
+    clear(): void;
+    receive(numFrames?: number): void;
+  }
+
+  export class RateTransposer {
+    rate: number;
+    inputBuffer: FifoBuffer;
+    outputBuffer: FifoBuffer;
+    clear(): void;
+    process(): void;
+  }
+
   export class Stretch {
     quickSeek: boolean;
+    inputBuffer: FifoBuffer;
+    outputBuffer: FifoBuffer;
     setParameters(sampleRate: number, sequenceMs: number, seekWindowMs: number, overlapMs: number): void;
+    clear(): void;
+    process(): void;
   }
 
   export class SoundTouch {
@@ -10,7 +27,13 @@ declare module "soundtouchjs" {
     pitch: number;
     pitchSemitones: number;
     stretch: Stretch;
+    transposer: RateTransposer;
+    _inputBuffer: FifoBuffer;
+    _intermediateBuffer: FifoBuffer;
+    _outputBuffer: FifoBuffer;
+    calculateEffectiveRateAndTempo(): void;
     clear(): void;
+    process(): void;
   }
 
   export class WebAudioBufferSource {
