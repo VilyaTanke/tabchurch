@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { UploadCloud, X, Sparkles, FileAudio } from "lucide-react";
+import { UploadCloud, X, Sparkles, FileAudio, Music } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import { DEFAULT_STEM_MODEL, STEM_MODELS } from "@/lib/stems";
 
@@ -32,7 +32,7 @@ export default function AudioUploadModal({
   const [selectedSongId, setSelectedSongId] = useState<string>("");
   const [musicalKey, setMusicalKey] = useState<string>("");
   const [bpm, setBpm] = useState<string>("");
-  const [autoSeparate, setAutoSeparate] = useState(true);
+  const [autoSeparate, setAutoSeparate] = useState(false);
   const [stemModel, setStemModel] = useState<string>(DEFAULT_STEM_MODEL);
 
   const [isUploading, setIsUploading] = useState(false);
@@ -279,32 +279,105 @@ export default function AudioUploadModal({
             </div>
           </div>
 
-          {/* Opción de separar con IA (Demucs) */}
-          <div className="ai-separation-box">
-            <label className="row" style={{ cursor: "pointer", alignItems: "flex-start", gap: "0.6rem" }}>
-              <input
-                type="checkbox"
-                checked={autoSeparate}
-                onChange={(e) => setAutoSeparate(e.target.checked)}
-                disabled={isUploading}
-                style={{ marginTop: "3px", width: "16px", height: "16px", accentColor: "var(--accent)" }}
-              />
-              <div className="grow">
-                <div className="row" style={{ gap: "0.4rem" }}>
-                  <Sparkles size={16} style={{ color: "var(--accent)" }} />
-                  <strong>Separar en pistas (stems) con IA (Demucs)</strong>
+          {/* Selector de Modo de Subida: Solo audio original vs Separación IA */}
+          <div className="field">
+            <label style={{ fontWeight: 600, color: "var(--text)" }}>Modo de subida:</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              {/* Opción 1: Subida rápida solo audio (Por defecto) */}
+              <div
+                onClick={() => setAutoSeparate(false)}
+                style={{
+                  cursor: "pointer",
+                  padding: "0.85rem",
+                  borderRadius: "12px",
+                  border: `2px solid ${!autoSeparate ? "var(--accent)" : "var(--border)"}`,
+                  background: !autoSeparate ? "rgba(180, 83, 9, 0.05)" : "var(--surface)",
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem",
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="row" style={{ gap: "0.4rem" }}>
+                    <Music size={17} style={{ color: !autoSeparate ? "var(--accent)" : "var(--muted)" }} />
+                    <strong style={{ fontSize: "0.88rem", color: !autoSeparate ? "var(--accent)" : "inherit" }}>
+                      Solo audio original
+                    </strong>
+                  </div>
+                  {!autoSeparate && (
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        padding: "0.1rem 0.4rem",
+                        background: "var(--accent)",
+                        color: "#fff",
+                        borderRadius: "999px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Rápido
+                    </span>
+                  )}
                 </div>
-                <p className="muted" style={{ fontSize: "0.82rem", margin: "0.2rem 0 0" }}>
-                  Aísla automáticamente la voz, batería, guitarras, bajo y piano para tratarlos por separado en el Estudio.
+                <p className="muted" style={{ fontSize: "0.78rem", margin: 0, lineHeight: 1.35 }}>
+                  Sube el audio al instante para reproducir y cambiar tono. Podrás separar los stems en cualquier momento desde el <strong>Estudio</strong>.
                 </p>
               </div>
-            </label>
 
+              {/* Opción 2: Separar con IA ahora */}
+              <div
+                onClick={() => setAutoSeparate(true)}
+                style={{
+                  cursor: "pointer",
+                  padding: "0.85rem",
+                  borderRadius: "12px",
+                  border: `2px solid ${autoSeparate ? "var(--accent)" : "var(--border)"}`,
+                  background: autoSeparate ? "rgba(180, 83, 9, 0.05)" : "var(--surface)",
+                  transition: "all 0.15s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.4rem",
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="row" style={{ gap: "0.4rem" }}>
+                    <Sparkles size={17} style={{ color: autoSeparate ? "var(--accent)" : "var(--muted)" }} />
+                    <strong style={{ fontSize: "0.88rem", color: autoSeparate ? "var(--accent)" : "inherit" }}>
+                      Separar con IA ahora
+                    </strong>
+                  </div>
+                  {autoSeparate && (
+                    <span
+                      style={{
+                        fontSize: "0.68rem",
+                        padding: "0.1rem 0.4rem",
+                        background: "var(--accent)",
+                        color: "#fff",
+                        borderRadius: "999px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Demucs
+                    </span>
+                  )}
+                </div>
+                <p className="muted" style={{ fontSize: "0.78rem", margin: 0, lineHeight: 1.35 }}>
+                  Aísla automáticamente voz, batería, bajo, guitarra y piano en segundo plano al terminar de subir.
+                </p>
+              </div>
+            </div>
+
+            {/* Selector de modelo si autoSeparate está activado */}
             {autoSeparate && (
-              <div style={{ marginTop: "0.6rem", paddingLeft: "1.6rem" }}>
+              <div style={{ marginTop: "0.5rem" }}>
+                <label htmlFor="stemModelSelect" style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+                  Modelo de separación Demucs:
+                </label>
                 <select
+                  id="stemModelSelect"
                   className="input"
-                  style={{ minHeight: "38px", fontSize: "0.85rem" }}
+                  style={{ minHeight: "38px", fontSize: "0.85rem", marginTop: "0.2rem" }}
                   value={stemModel}
                   onChange={(e) => setStemModel(e.target.value)}
                   disabled={isUploading}
@@ -355,7 +428,11 @@ export default function AudioUploadModal({
               className="btn gold"
               disabled={isUploading || !selectedFile}
             >
-              {isUploading ? "Subiendo..." : "Subir Audio"}
+              {isUploading
+                ? "Subiendo..."
+                : autoSeparate
+                ? "Subir y Separar con IA"
+                : "Subir Solo Audio"}
             </button>
           </div>
         </form>
