@@ -74,7 +74,7 @@ def main():
     parser.add_argument("--model", default="htdemucs_6s")
     parser.add_argument("--device", default="auto", help="auto | cpu | cuda | mps")
     parser.add_argument("--shifts", type=int, default=1)
-    parser.add_argument("--overlap", type=float, default=0.25)
+    parser.add_argument("--overlap", type=float, default=0.5, help="0.5 (50%) recomendado para evitar clicks en transiciones")
     parser.add_argument("--threads", type=int, default=0)
     args = parser.parse_args()
 
@@ -181,19 +181,28 @@ def main():
     sources = sources * std + mean
     emit("PROGRESS", 91)
 
-    # --- Guardar stems ---
+    # --- Guardar stems a máxima calidad (MP3 320 kbps o WAV sin pérdidas) ---
     os.makedirs(args.output, exist_ok=True)
     names = list(model.sources)
     written = []
+    from demucs.audio import save_audio
+
     for i, (name, src) in enumerate(zip(names, sources)):
-        arr = src.detach().cpu().numpy().T  # (frames, canales)
-        peak = float(np.abs(arr).max()) if arr.size else 0.0
-        arr = arr / max(1.01 * peak, 1.0)  # evita saturación (igual que demucs: clip="rescale")
+        out_mp3 = os.path.join(args.output, f"{name}.mp3")
+        saved_file = f"{name}.mp3"
         try:
-            path = write_audio(sf, np, os.path.join(args.output, name), arr.astype(np.float32), samplerate)
-        except Exception as exc:  # noqa: BLE001
-            return fail(f"No se pudo guardar la pista {name}: {exc}")
-        written.append({"name": name, "file": os.path.basename(path)})
+            # 320 kbps MP3 de calidad estudio con protección anti-saturación rescale
+            save_audio(src, out_mp3, samplerate, bitrate=320, clip="rescale", preset=2)
+        except Exception:
+            # Fallback seguro a WAV 16-bit PCM sin compresión
+            out_wav = os.path.join(args.output, f"{name}.wav")
+            saved_file = f"{name}.wav"
+            arr = src.detach().cpu().numpy().T
+            peak = float(np.abs(arr).max()) if arr.size else 0.0
+            arr = arr / max(1.01 * peak, 1.0)
+            sf.write(out_wav, arr.astype(np.float32), samplerate, format="WAV", subtype="PCM_16")
+
+        written.append({"name": name, "file": saved_file})
         emit("PROGRESS", int(91 + (i + 1) / len(names) * 8))
 
     emit("DONE", json.dumps({"stems": written, "samplerate": samplerate, "device": device}))

@@ -1,9 +1,15 @@
 declare module "soundtouchjs" {
+  export class Stretch {
+    quickSeek: boolean;
+    setParameters(sampleRate: number, sequenceMs: number, seekWindowMs: number, overlapMs: number): void;
+  }
+
   export class SoundTouch {
     rate: number;
     tempo: number;
     pitch: number;
     pitchSemitones: number;
+    stretch: Stretch;
     clear(): void;
   }
 

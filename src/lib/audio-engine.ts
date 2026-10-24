@@ -67,7 +67,9 @@ export class SoundTouchChannel {
     this.ctx = ctx;
     this.buffer = buffer;
     this.soundTouch = new SoundTouch();
-    // Por defecto: tono original (0 semitonos) y velocidad normal (tempo = 1.0)
+    // Calibrar frecuencia de muestreo exacta del hardware (ej. 48000 Hz) y activar máxima precisión sin clicks
+    this.soundTouch.stretch.quickSeek = false;
+    this.soundTouch.stretch.setParameters(this.ctx.sampleRate, 0, 0, 0);
     this.soundTouch.pitchSemitones = 0;
     this.soundTouch.tempo = 1.0;
 
@@ -101,8 +103,11 @@ export class SoundTouchChannel {
       }
 
       for (let i = 0; i < frames; i++) {
-        left[i] = this.samples[i * 2];
-        right[i] = this.samples[i * 2 + 1];
+        const l = this.samples[i * 2];
+        const r = this.samples[i * 2 + 1];
+        // Soft clipping analógico para evitar distorsión o clicks
+        left[i] = l > 1 ? Math.tanh(l) : l < -1 ? Math.tanh(l) : l;
+        right[i] = r > 1 ? Math.tanh(r) : r < -1 ? Math.tanh(r) : r;
       }
       for (let i = frames; i < this.bufferSize; i++) {
         left[i] = 0;
@@ -127,7 +132,10 @@ export class SoundTouchChannel {
    * la velocidad original (tempo = 1.0), sin acelerar ni ralentizar la canción.
    */
   setSemitones(semitones: number) {
+    const curPos = this.filter.sourcePosition;
     this.soundTouch.pitchSemitones = semitones;
+    this.soundTouch.tempo = this.currentTempo;
+    this.filter.sourcePosition = curPos;
   }
 
   /** Permite ajustar la velocidad de reproducción de manera independiente al tono. */
@@ -249,6 +257,9 @@ export class MultiTrackSoundTouchEngine {
         const buffer = await loadAudioBuffer(spec.url, this.ctx);
         const source = new WebAudioBufferSource(buffer);
         const soundTouch = new SoundTouch();
+        // Calibrar frecuencia de muestreo exacta del hardware y desactivar quickSeek para evitar clicks
+        soundTouch.stretch.quickSeek = false;
+        soundTouch.stretch.setParameters(this.ctx.sampleRate, 0, 0, 0);
         soundTouch.pitchSemitones = this.currentSemitones;
         soundTouch.tempo = this.currentTempo;
 
@@ -320,6 +331,14 @@ export class MultiTrackSoundTouchEngine {
         return;
       }
 
+      // Soft-clipping analógico suave: previene distorsión armónica o clicks por saturación
+      for (let i = 0; i < maxFrames; i++) {
+        const l = left[i];
+        const r = right[i];
+        left[i] = l > 1 ? Math.tanh(l) : l < -1 ? Math.tanh(l) : l;
+        right[i] = r > 1 ? Math.tanh(r) : r < -1 ? Math.tanh(r) : r;
+      }
+
       const songElapsed = (maxFrames / this.ctx.sampleRate) * this.currentTempo;
       this.playheadSec += songElapsed;
 
@@ -358,7 +377,10 @@ export class MultiTrackSoundTouchEngine {
   setSemitones(semitones: number): void {
     this.currentSemitones = semitones;
     for (const ch of this.channels) {
+      const curPos = ch.filter.sourcePosition;
       ch.soundTouch.pitchSemitones = semitones;
+      ch.soundTouch.tempo = this.currentTempo;
+      ch.filter.sourcePosition = curPos;
     }
   }
 
