@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const now = sql`(unixepoch())`;
 
@@ -69,4 +69,30 @@ export const setlistItems = sqliteTable("setlist_items", {
   keyOverride: text("key_override"),
   notes: text("notes"),
   twoColumns: integer("two_columns").notNull().default(0),
+});
+
+/** Pistas de audio (MP3) de la galería y su separación en stems con IA (Demucs). */
+export const tracks = sqliteTable("tracks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  artist: text("artist"),
+  songId: integer("song_id").references(() => songs.id, { onDelete: "set null" }),
+  uploadedBy: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  fileName: text("file_name").notNull(),
+  originalName: text("original_name"),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes").notNull().default(0),
+  durationSec: real("duration_sec"),
+  musicalKey: text("musical_key"),
+  bpm: integer("bpm"),
+  stemsStatus: text("stems_status", { enum: ["none", "queued", "processing", "done", "error"] })
+    .notNull()
+    .default("none"),
+  stemsProgress: integer("stems_progress").notNull().default(0),
+  stemsModel: text("stems_model"),
+  /** JSON: [{ name: "vocals", file: "vocals.mp3" }, ...] */
+  stemsList: text("stems_list"),
+  stemsError: text("stems_error"),
+  createdAt: integer("created_at").notNull().default(now),
+  updatedAt: integer("updated_at").notNull().default(now),
 });

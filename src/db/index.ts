@@ -66,6 +66,28 @@ CREATE TABLE IF NOT EXISTS setlist_items (
   notes TEXT,
   two_columns INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS tracks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  artist TEXT,
+  song_id INTEGER REFERENCES songs(id) ON DELETE SET NULL,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  file_name TEXT NOT NULL,
+  original_name TEXT,
+  mime_type TEXT,
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  duration_sec REAL,
+  musical_key TEXT,
+  bpm INTEGER,
+  stems_status TEXT NOT NULL DEFAULT 'none',
+  stems_progress INTEGER NOT NULL DEFAULT 0,
+  stems_model TEXT,
+  stems_list TEXT,
+  stems_error TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS tracks_song_idx ON tracks(song_id);
 `;
 
 function init() {

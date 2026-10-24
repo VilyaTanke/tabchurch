@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { desc, eq } from "drizzle-orm";
+import { ArrowLeft, Pencil, Trash2, SlidersHorizontal, Radio } from "lucide-react";
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
 import { deleteSong } from "@/app/songs-actions";
@@ -17,6 +17,14 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
     .where(eq(schema.songs.id, Number(id)))
     .get();
   if (!song) notFound();
+
+  // Buscar si esta canción tiene pista de audio vinculada en la galería
+  const linkedTrack = db
+    .select()
+    .from(schema.tracks)
+    .where(eq(schema.tracks.songId, song.id))
+    .orderBy(desc(schema.tracks.createdAt))
+    .get();
 
   const canEditOrDelete = canManageSongs(user);
 
@@ -60,6 +68,44 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
           )}
         </p>
       </div>
+
+      {linkedTrack && (
+        <div
+          className="card row"
+          style={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "linear-gradient(90deg, rgba(223, 186, 115, 0.12) 0%, rgba(180, 83, 9, 0.05) 100%)",
+            borderColor: "rgba(212, 175, 55, 0.35)",
+          }}
+        >
+          <div className="row" style={{ gap: "0.6rem" }}>
+            <Radio size={20} style={{ color: "var(--accent)" }} />
+            <div>
+              <div className="row" style={{ gap: "0.4rem" }}>
+                <strong style={{ fontSize: "0.95rem" }}>Pista de Audio MP3 disponible</strong>
+                {linkedTrack.stemsStatus === "done" && (
+                  <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#059669" }}>
+                    Stems listos
+                  </span>
+                )}
+              </div>
+              <p className="muted" style={{ fontSize: "0.82rem", margin: "2px 0 0" }}>
+                {linkedTrack.title} {linkedTrack.artist ? `· ${linkedTrack.artist}` : ""}
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/galeria/${linkedTrack.id}/estudio`}
+            className="btn small gold"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <SlidersHorizontal size={14} />
+            <span>Abrir en Estudio</span>
+          </Link>
+        </div>
+      )}
+
       {song.notes && <div className="card"><span className="muted">Notas</span><p style={{ whiteSpace: "pre-wrap" }}>{song.notes}</p></div>}
       <SongViewer
         songId={song.id}

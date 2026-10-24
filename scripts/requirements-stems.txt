@@ -1,0 +1,5 @@
+# Motor de separación de pistas (stems) de TabChurch.
+# torch se instala ANTES desde el índice oficial de PyTorch (CPU o CUDA) con scripts/setup-stems.*
+demucs>=4.0.1
+soundfile>=0.12.1
+numpy

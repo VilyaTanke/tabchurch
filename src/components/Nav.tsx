@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { animate, stagger } from "animejs";
-import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, UserCircle, type LucideIcon } from "lucide-react";
+import { Home, Music, ListMusic, Users, ShieldCheck, LogOut, UserCircle, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { logout } from "@/app/actions";
 import RoleBadge from "@/components/RoleBadge";
 import BrandLogo from "@/components/BrandLogo";
@@ -22,6 +22,7 @@ const links: NavItem[] = [
   { href: "/canciones", label: "Canciones", icon: Music },
   { href: "/listas", label: "Listas", icon: ListMusic },
   { href: "/grupos", label: "Grupos", icon: Users },
+  { href: "/galeria", label: "Audios", icon: SlidersHorizontal },
 ];
 
 export default function Nav({
