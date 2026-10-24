@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import {
   Play,
@@ -15,7 +15,6 @@ import {
   Save,
   Music,
   ExternalLink,
-  RotateCcw,
   Repeat,
   Repeat1,
   Check,
@@ -269,7 +268,7 @@ export default function UnifiedAudioPlayer({
                 className="btn small gold player-save-key-btn"
                 onClick={onSaveKey}
                 disabled={isSavingKey}
-                title={`Guardar nuevo tono (${currentDisplayedKey}) permanentemente en el archivo MP3`}
+                title={`Guardar nuevo tono (${currentDisplayedKey || (semitones > 0 ? `+${semitones}` : semitones)}) permanentemente en el archivo MP3`}
               >
                 {isSavingKey ? (
                   <>
@@ -279,7 +278,7 @@ export default function UnifiedAudioPlayer({
                 ) : (
                   <>
                     <Save size={13} />
-                    <span>Guardar tono ({currentDisplayedKey})</span>
+                    <span>Guardar tono {currentDisplayedKey ? `(${currentDisplayedKey})` : `(${semitones > 0 ? `+${semitones}` : semitones})`}</span>
                   </>
                 )}
               </button>

@@ -527,6 +527,7 @@ export async function renderTransposedMp3(
 
   let processedFrames = 0;
   const estimatedTotalFrames = audioBuffer.length;
+  let batchCounter = 0;
 
   while (true) {
     const frames = filter.extract(samples, bufferSize);
@@ -548,9 +549,15 @@ export async function renderTransposedMp3(
     }
 
     processedFrames += frames;
-    if (onProgress && estimatedTotalFrames > 0) {
-      const pct = Math.min(98, Math.round((processedFrames / estimatedTotalFrames) * 100));
-      onProgress(pct);
+    batchCounter++;
+
+    // Ceder el hilo de ejecución periódicamente cada 4 iteraciones para actualizar el render de React y la barra de progreso
+    if (batchCounter % 4 === 0) {
+      if (onProgress && estimatedTotalFrames > 0) {
+        const pct = Math.min(98, Math.round((processedFrames / estimatedTotalFrames) * 100));
+        onProgress(pct);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 

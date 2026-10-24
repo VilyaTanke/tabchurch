@@ -255,30 +255,44 @@ export default function GalleryView({
 
   // Guardar el MP3 con la tonalidad modificada permanentemente en el servidor
   const handleSaveTransposedKey = async () => {
-    if (!activeTrack || !playerChannelRef.current || semitones === 0) return;
+    if (!activeTrack || semitones === 0) return;
     if (!canManage) {
-      alert("No tienes permisos para modificar este archivo.");
+      alert("No tienes permisos para modificar este archivo (se requiere rol Editor o Admin).");
       return;
     }
-
-    const baseKey = activeTrack.musicalKey || activeTrack.song?.currentKey || activeTrack.song?.originalKey;
-    const newKey = baseKey ? transposeKey(baseKey, semitones) : null;
-    if (!newKey) return;
 
     try {
       setIsSavingKey(true);
       setSaveProgress(5);
 
+      const ctx = getSharedAudioContext();
+      await ensureAudioContextResumed(ctx);
+
+      // Obtener o cargar el buffer de audio de la pista activa
+      let sourceBuffer = playerChannelRef.current?.buffer;
+      if (!sourceBuffer) {
+        sourceBuffer = await loadAudioBuffer(`/api/tracks/${activeTrack.id}`, ctx);
+      }
+
+      // Calcular el nuevo tono si la canción tiene tono registrado
+      const baseKey = (activeTrack.musicalKey || activeTrack.song?.currentKey || activeTrack.song?.originalKey || "").trim();
+      let newKey: string | null = null;
+      if (baseKey) {
+        newKey = transposeKey(baseKey, semitones) || `${baseKey} (${semitones > 0 ? `+${semitones}` : semitones})`;
+      }
+
       // Renderizar el audio transpuesto offline mediante SoundTouch y LameJS
       const mp3Blob = await renderTransposedMp3(
-        playerChannelRef.current.buffer,
+        sourceBuffer,
         semitones,
         (pct) => setSaveProgress(pct)
       );
 
       const formData = new FormData();
       formData.append("file", mp3Blob, `${activeTrack.title}.mp3`);
-      formData.append("musicalKey", newKey);
+      if (newKey) {
+        formData.append("musicalKey", newKey);
+      }
 
       const res = await fetch(`/api/tracks/${activeTrack.id}/transposed`, {
         method: "POST",
@@ -286,17 +300,17 @@ export default function GalleryView({
       });
 
       if (!res.ok) {
-        throw new Error("No se pudo guardar el archivo MP3 modificado en el servidor.");
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson?.error || "No se pudo guardar el archivo MP3 modificado en el servidor.");
       }
 
-      const data = await res.json();
       const updatedTrack: GalleryTrackItem = {
         ...activeTrack,
-        musicalKey: newKey,
+        musicalKey: newKey || activeTrack.musicalKey,
         sizeBytes: mp3Blob.size,
       };
 
-      // Limpiar caché en memoria para que las próximas descargas tomen el nuevo archivo
+      // Limpiar caché en memoria para que las próximas reproducciones/descargas tomen el nuevo archivo
       clearAudioBufferCache(`/api/tracks/${activeTrack.id}`);
 
       // Actualizar la lista local de canciones
@@ -305,15 +319,15 @@ export default function GalleryView({
       // Restablecer semitonos a 0 porque ahora el MP3 base ya está grabado en el nuevo tono
       setSemitones(0);
 
-      // Recargar buffer actualizado en el canal sin parar la reproducción
-      const ctx = getSharedAudioContext();
-      const newBuffer = await ctx.decodeAudioData(await mp3Blob.arrayBuffer());
+      // Recargar buffer actualizado en el canal si el reproductor está activo
       if (playerChannelRef.current) {
         const wasPlaying = playerChannelRef.current.isPlaying;
         const currentPos = playerChannelRef.current.getCurrentTime();
         playerChannelRef.current.destroy();
 
-        const ch = new SoundTouchChannel(ctx, newBuffer, ctx.destination);
+        // Cargar el nuevo archivo directamente con cache-busting
+        const freshBuffer = await loadAudioBuffer(`/api/tracks/${activeTrack.id}?t=${Date.now()}`, ctx);
+        const ch = new SoundTouchChannel(ctx, freshBuffer, ctx.destination);
         ch.setSemitones(0);
         ch.setVolume(volume);
         ch.setMuted(isMuted);
@@ -323,11 +337,15 @@ export default function GalleryView({
         playerChannelRef.current = ch;
       }
 
-      setSaveSuccessMsg(`¡Tono guardado con éxito! El archivo MP3 ahora está en tono ${newKey}.`);
+      setSaveSuccessMsg(
+        newKey
+          ? `¡Tono guardado con éxito! El archivo MP3 ahora está en tono ${newKey}.`
+          : "¡Tono modificado guardado con éxito en el archivo MP3!"
+      );
       setTimeout(() => setSaveSuccessMsg(null), 4500);
     } catch (err: unknown) {
-      console.error(err);
-      alert((err as Error)?.message || "Error al guardar el tono modificado.");
+      console.error("Error al guardar tono modificado:", err);
+      alert((err as Error)?.message || "Ocurrió un error al guardar el archivo MP3 modificado.");
     } finally {
       setIsSavingKey(false);
       setSaveProgress(0);
