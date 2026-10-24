@@ -103,10 +103,23 @@ export default function AudioUploadModal({
 
       setUploadProgress(85);
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Ocurrió un error al subir el archivo.");
+        if (res.status === 413) {
+          throw new Error(
+            "El archivo supera el tamaño máximo permitido por el servidor web (Error 413: Request Entity Too Large). El proxy Nginx del servidor requiere 'client_max_body_size 100M;'."
+          );
+        }
+        let errMsg = "Ocurrió un error al subir el archivo.";
+        try {
+          const errData = await res.json();
+          if (errData?.error) errMsg = errData.error;
+        } catch {
+          errMsg = `Error del servidor (${res.status} ${res.statusText})`;
+        }
+        throw new Error(errMsg);
       }
+
+      const data = await res.json();
 
       setUploadProgress(100);
       onClose();
