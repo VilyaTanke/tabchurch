@@ -5,7 +5,7 @@ import GalleryView from "@/components/GalleryView";
 import type { GalleryTrackItem } from "@/components/TrackCard";
 
 export const metadata = {
-  title: "Galería de Audios & MP3 · Tab-NuevaVida",
+  title: "Zamar · Tab-NuevaVida",
 };
 
 export default async function GalleryPage() {

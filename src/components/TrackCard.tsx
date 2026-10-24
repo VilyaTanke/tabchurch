@@ -243,7 +243,7 @@ export default function TrackCard({
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
             <Sliders size={14} />
-            <span>Estudio</span>
+            <span>Estudio Z</span>
           </Link>
         </div>
       </div>

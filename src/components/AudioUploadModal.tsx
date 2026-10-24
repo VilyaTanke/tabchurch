@@ -149,7 +149,7 @@ export default function AudioUploadModal({
         <div className="row" style={{ justifyContent: "space-between", marginBottom: "1rem" }}>
           <div className="row" style={{ gap: "0.5rem" }}>
             <FileAudio size={22} style={{ color: "var(--accent)" }} />
-            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Subir Audio a la Galería</h2>
+            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Subir Audio a Zamar</h2>
           </div>
           <button
             type="button"
@@ -325,7 +325,7 @@ export default function AudioUploadModal({
                   )}
                 </div>
                 <p className="muted" style={{ fontSize: "0.78rem", margin: 0, lineHeight: 1.35 }}>
-                  Sube el audio al instante para reproducir y cambiar tono. Podrás separar los stems en cualquier momento desde el <strong>Estudio</strong>.
+                  Sube el audio al instante para reproducir y cambiar tono. Podrás separar los stems en cualquier momento desde el <strong>Estudio Z</strong>.
                 </p>
               </div>
 

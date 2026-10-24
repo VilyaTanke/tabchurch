@@ -102,7 +102,7 @@ export default async function SongsPage({
           style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
         >
           <SlidersHorizontal size={14} style={{ color: "var(--accent)" }} />
-          <span>Audios & Reproductor MP3</span>
+          <span>Zamar</span>
         </Link>
       </div>
 

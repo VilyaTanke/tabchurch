@@ -22,7 +22,7 @@ const links: NavItem[] = [
   { href: "/canciones", label: "Canciones", icon: Music },
   { href: "/listas", label: "Listas", icon: ListMusic },
   { href: "/grupos", label: "Grupos", icon: Users },
-  { href: "/galeria", label: "Audios", icon: SlidersHorizontal },
+  { href: "/galeria", label: "Zamar", icon: SlidersHorizontal },
 ];
 
 export default function Nav({

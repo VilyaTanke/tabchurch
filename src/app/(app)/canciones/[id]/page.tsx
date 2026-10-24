@@ -101,7 +101,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
             <SlidersHorizontal size={14} />
-            <span>Abrir en Estudio</span>
+            <span>Abrir en Estudio Z</span>
           </Link>
         </div>
       )}

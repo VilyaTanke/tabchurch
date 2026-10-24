@@ -360,7 +360,7 @@ export default function GalleryView({
         <div>
           <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
             <SlidersHorizontal size={26} style={{ color: "var(--accent)" }} />
-            <span>Biblioteca y Reproductor de Canciones</span>
+            <span>Zamar</span>
           </h1>
           <p className="muted" style={{ fontSize: "0.85rem", marginTop: "2px" }}>
             {tracks.length} {tracks.length === 1 ? "canción" : "canciones"} en la lista de reproducción · Reproductor unificado con transpositor y guardado de MP3
@@ -584,10 +584,10 @@ export default function GalleryView({
                     <Link
                       href={`/galeria/${track.id}/estudio`}
                       className="btn ghost small"
-                      title="Abrir en Estudio multipista"
+                      title="Abrir en Estudio Z (Stems)"
                     >
                       <Sliders size={13} />
-                      <span className="hide-sm">Estudio</span>
+                      <span className="hide-sm">Estudio Z</span>
                     </Link>
 
                     <a

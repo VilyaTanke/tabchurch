@@ -434,11 +434,11 @@ export default function StudioPlayer({
       {/* ---------- ENCABEZADO SUPERIOR DEL ESTUDIO ---------- */}
       <header className="studio-header">
         <div className="studio-header-left">
-          <Link href="/galeria" className="studio-back-btn" title="Volver a la galería">
+          <Link href="/galeria" className="studio-back-btn" title="Volver a Zamar">
             <ArrowLeft size={18} />
           </Link>
           <div className="studio-brand">
-            <span className="studio-badge-pro">ESTUDIO STEMS</span>
+            <span className="studio-badge-pro">ESTUDIO Z</span>
             <div className="studio-title-block">
               <h1 className="studio-track-title" title={track.title}>
                 {track.title}

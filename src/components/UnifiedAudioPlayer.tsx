@@ -330,7 +330,7 @@ export default function UnifiedAudioPlayer({
             <Link
               href={`/galeria/${track.id}/estudio`}
               className="btn ghost small player-action-icon"
-              title="Abrir en Estudio multipista (Stems)"
+              title="Abrir en Estudio Z (Stems)"
             >
               <Sliders size={15} />
             </Link>

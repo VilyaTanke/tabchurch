@@ -6,7 +6,7 @@ import { parseStemsList } from "@/lib/stems";
 import StudioPlayer, { type StudioTrackData } from "@/components/StudioPlayer";
 
 export const metadata = {
-  title: "Estudio de Pistas & Stems · Tab-NuevaVida",
+  title: "Estudio Z · Pistas & Stems · Tab-NuevaVida",
 };
 
 export default async function TrackStudioPage({
