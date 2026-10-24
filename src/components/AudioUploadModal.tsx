@@ -18,10 +18,12 @@ export default function AudioUploadModal({
   songs,
   isOpen,
   onClose,
+  onTrackUploaded,
 }: {
   songs: SongOption[];
   isOpen: boolean;
   onClose: () => void;
+  onTrackUploaded?: (track: any) => void;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,8 +126,10 @@ export default function AudioUploadModal({
       setUploadProgress(100);
       onClose();
       router.refresh();
-      // Redirigir directamente al nuevo estudio
-      if (data.track?.id) {
+      if (onTrackUploaded && data.track) {
+        onTrackUploaded(data.track);
+      } else if (data.track?.id) {
+        // Redirigir directamente al nuevo estudio si no hay callback personalizado
         router.push(`/galeria/${data.track.id}/estudio`);
       }
     } catch (err: unknown) {

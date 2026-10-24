@@ -1,7 +1,16 @@
 import { SoundTouch, SimpleFilter, WebAudioBufferSource } from "soundtouchjs";
+import { Mp3Encoder } from "@breezystack/lamejs";
 
 // Caché en memoria para no re-descargar ni re-decodificar buffers de audio ya cargados
 const audioBufferCache = new Map<string, AudioBuffer>();
+
+export function clearAudioBufferCache(url?: string): void {
+  if (url) {
+    audioBufferCache.delete(url);
+  } else {
+    audioBufferCache.clear();
+  }
+}
 
 let sharedAudioContext: AudioContext | null = null;
 
@@ -208,6 +217,18 @@ export class SoundTouchChannel {
     if (anySoloActive && !this.isSolo) effective = 0;
 
     this.gainNode.gain.setValueAtTime(Math.max(0, Math.min(1, effective)), this.ctx.currentTime);
+  }
+
+  setVolume(vol: number) {
+    this.channelVolume = Math.max(0, Math.min(1, vol));
+    const effective = this.isMuted ? 0 : this.channelVolume;
+    this.gainNode.gain.setValueAtTime(effective, this.ctx.currentTime);
+  }
+
+  setMuted(muted: boolean) {
+    this.isMuted = muted;
+    const effective = muted ? 0 : this.channelVolume;
+    this.gainNode.gain.setValueAtTime(effective, this.ctx.currentTime);
   }
 
   destroy() {
@@ -477,3 +498,69 @@ export class MultiTrackSoundTouchEngine {
     this.channels = [];
   }
 }
+
+/**
+ * Renderiza de forma offline un AudioBuffer transpuesto en semitonos usando SoundTouch (WSOLA DSP)
+ * y lo codifica directamente a un archivo MP3 puro (192 kbps estéreo) mediante LameJS.
+ */
+export async function renderTransposedMp3(
+  audioBuffer: AudioBuffer,
+  semitones: number,
+  onProgress?: (pct: number) => void
+): Promise<Blob> {
+  const sampleRate = audioBuffer.sampleRate;
+  const source = new WebAudioBufferSource(audioBuffer);
+  const soundTouch = new SoundTouch();
+  configureSoundTouchInstance(soundTouch, sampleRate, semitones, 1.0);
+  const filter = new SimpleFilter(source, soundTouch);
+
+  const numChannels = 2;
+  const kbps = 192;
+  const mp3Encoder = new Mp3Encoder(numChannels, sampleRate, kbps);
+
+  const bufferSize = 8192;
+  const samples = new Float32Array(bufferSize * 2);
+  const mp3Chunks: Uint8Array[] = [];
+
+  const leftChunk = new Int16Array(bufferSize);
+  const rightChunk = new Int16Array(bufferSize);
+
+  let processedFrames = 0;
+  const estimatedTotalFrames = audioBuffer.length;
+
+  while (true) {
+    const frames = filter.extract(samples, bufferSize);
+    if (frames === 0) break;
+
+    for (let i = 0; i < frames; i++) {
+      const l = Math.max(-1, Math.min(1, softLimit(samples[i * 2])));
+      const r = Math.max(-1, Math.min(1, softLimit(samples[i * 2 + 1])));
+      leftChunk[i] = l < 0 ? l * 0x8000 : l * 0x7fff;
+      rightChunk[i] = r < 0 ? r * 0x8000 : r * 0x7fff;
+    }
+
+    const mp3Buf = mp3Encoder.encodeBuffer(
+      frames === bufferSize ? leftChunk : leftChunk.subarray(0, frames),
+      frames === bufferSize ? rightChunk : rightChunk.subarray(0, frames)
+    );
+    if (mp3Buf.length > 0) {
+      mp3Chunks.push(new Uint8Array(mp3Buf));
+    }
+
+    processedFrames += frames;
+    if (onProgress && estimatedTotalFrames > 0) {
+      const pct = Math.min(98, Math.round((processedFrames / estimatedTotalFrames) * 100));
+      onProgress(pct);
+    }
+  }
+
+  const endBuf = mp3Encoder.flush();
+  if (endBuf.length > 0) {
+    mp3Chunks.push(new Uint8Array(endBuf));
+  }
+
+  if (onProgress) onProgress(100);
+
+  return new Blob(mp3Chunks as BlobPart[], { type: "audio/mpeg" });
+}
+

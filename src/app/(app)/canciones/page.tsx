@@ -8,6 +8,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
@@ -78,7 +79,7 @@ export default async function SongsPage({
       </div>
 
       {/* Pestañas de Vista */}
-      <div className="row" style={{ gap: "0.5rem" }}>
+      <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
         <Link
           href="/canciones"
           className="btn small"
@@ -94,6 +95,14 @@ export default async function SongsPage({
         >
           <User size={14} />
           <span>Por Artista</span>
+        </Link>
+        <Link
+          href="/galeria"
+          className="btn ghost small"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <SlidersHorizontal size={14} style={{ color: "var(--accent)" }} />
+          <span>Audios & Reproductor MP3</span>
         </Link>
       </div>
 
