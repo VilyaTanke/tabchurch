@@ -12,6 +12,7 @@ import {
   KeyRound,
   Shield,
   Sparkles,
+  Church,
 } from "lucide-react";
 import { updateProfile } from "@/app/actions";
 import { AVATAR_OPTIONS, getAvatarSrc } from "@/lib/avatars";
@@ -25,6 +26,7 @@ interface ProfileAvatarPickerProps {
     email: string | null;
     role: string;
     avatar: string | null;
+    churchName?: string | null;
   };
 }
 
@@ -223,6 +225,17 @@ export default function ProfileAvatarPicker({ initialUser }: ProfileAvatarPicker
                   ? "Editor de Alabanzas"
                   : "Miembro / Lector"}
               </span>
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Iglesia Asignada</label>
+            <div
+              className="input disabled"
+              style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+            >
+              <Church size={16} style={{ color: initialUser.churchName ? "var(--accent)" : "var(--muted)" }} />
+              <span>{initialUser.churchName || "Sin iglesia asignada"}</span>
             </div>
           </div>
 

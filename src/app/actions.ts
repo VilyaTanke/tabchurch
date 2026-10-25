@@ -46,6 +46,9 @@ export async function createUser(_: FormState, form: FormData): Promise<FormStat
   const password = String(form.get("password") ?? "");
   const roleInput = form.get("role");
   const role = roleInput === "admin" ? "admin" : roleInput === "editor" ? "editor" : "user";
+  const churchIdVal = form.get("churchId");
+  const churchId = churchIdVal && String(churchIdVal).trim() !== "" ? Number(churchIdVal) : null;
+
   if (!name || !username) return { error: "Nombre y usuario son obligatorios" };
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) return { error: "Usuario: 3-30 caracteres (letras, números, . _ -)" };
   if (password.length < 8) return { error: "La contraseña temporal debe tener al menos 8 caracteres" };
@@ -53,7 +56,7 @@ export async function createUser(_: FormState, form: FormData): Promise<FormStat
     return { error: "Ese usuario ya existe" };
   }
   db.insert(schema.users)
-    .values({ name, username, email, role, passwordHash: bcrypt.hashSync(password, 10), mustChangePw: true })
+    .values({ name, username, email, role, churchId, passwordHash: bcrypt.hashSync(password, 10), mustChangePw: true })
     .run();
   revalidatePath("/admin");
   return { ok: `Usuario «${username}» creado. Deberá cambiar la contraseña al entrar.` };
@@ -89,6 +92,9 @@ export async function updateUser(_: FormState, form: FormData): Promise<FormStat
   const name = String(form.get("name") ?? "").trim();
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const email = String(form.get("email") ?? "").trim() || null;
+  const churchIdVal = form.get("churchId");
+  const churchId = churchIdVal && String(churchIdVal).trim() !== "" ? Number(churchIdVal) : null;
+
   if (!id || isNaN(id)) return { error: "ID de usuario inválido" };
   if (!name || !username) return { error: "Nombre y usuario son obligatorios" };
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
@@ -126,6 +132,7 @@ export async function updateUser(_: FormState, form: FormData): Promise<FormStat
       username,
       email,
       role,
+      churchId,
     })
     .where(eq(schema.users.id, id))
     .run();
@@ -156,4 +163,92 @@ export async function updateProfile(_: FormState, form: FormData): Promise<FormS
   revalidatePath("/admin");
   return { ok: "Tu perfil ha sido actualizado correctamente." };
 }
+
+export async function createChurch(_: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const name = String(form.get("name") ?? "").trim();
+  const city = String(form.get("city") ?? "").trim() || null;
+  const address = String(form.get("address") ?? "").trim() || null;
+  const notes = String(form.get("notes") ?? "").trim() || null;
+
+  if (!name || name.length < 2) {
+    return { error: "El nombre de la iglesia debe tener al menos 2 caracteres" };
+  }
+
+  const existing = db.select().from(schema.churches).where(eq(schema.churches.name, name)).get();
+  if (existing) {
+    return { error: `Ya existe una iglesia registrada con el nombre «${name}»` };
+  }
+
+  db.insert(schema.churches)
+    .values({ name, city, address, notes })
+    .run();
+
+  revalidatePath("/admin");
+  return { ok: `Iglesia «${name}» creada correctamente.` };
+}
+
+export async function updateChurch(_: FormState, form: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = Number(form.get("id"));
+  const name = String(form.get("name") ?? "").trim();
+  const city = String(form.get("city") ?? "").trim() || null;
+  const address = String(form.get("address") ?? "").trim() || null;
+  const notes = String(form.get("notes") ?? "").trim() || null;
+
+  if (!id || isNaN(id)) return { error: "ID de iglesia inválido" };
+  if (!name || name.length < 2) return { error: "El nombre de la iglesia es obligatorio" };
+
+  const duplicate = db
+    .select()
+    .from(schema.churches)
+    .where(and(eq(schema.churches.name, name), ne(schema.churches.id, id)))
+    .get();
+  if (duplicate) {
+    return { error: `Ya existe otra iglesia registrada con el nombre «${name}»` };
+  }
+
+  db.update(schema.churches)
+    .set({ name, city, address, notes })
+    .where(eq(schema.churches.id, id))
+    .run();
+
+  revalidatePath("/admin");
+  return { ok: `Iglesia «${name}» actualizada correctamente.` };
+}
+
+export async function deleteChurch(form: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(form.get("id"));
+  if (!id || isNaN(id)) return;
+
+  // Desasignar usuarios de esta iglesia
+  db.update(schema.users)
+    .set({ churchId: null })
+    .where(eq(schema.users.churchId, id))
+    .run();
+
+  // Eliminar la iglesia
+  db.delete(schema.churches)
+    .where(eq(schema.churches.id, id))
+    .run();
+
+  revalidatePath("/admin");
+}
+
+export async function assignUserChurch(form: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = Number(form.get("userId"));
+  const churchIdVal = form.get("churchId");
+  const churchId = churchIdVal && String(churchIdVal).trim() !== "" ? Number(churchIdVal) : null;
+  if (!userId || isNaN(userId)) return;
+
+  db.update(schema.users)
+    .set({ churchId })
+    .where(eq(schema.users.id, userId))
+    .run();
+
+  revalidatePath("/admin");
+}
+
 

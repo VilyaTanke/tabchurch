@@ -1,4 +1,6 @@
 import { Metadata } from "next";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import ProfileAvatarPicker from "@/components/ProfileAvatarPicker";
 
@@ -9,6 +11,9 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   const user = await requireUser();
+  const church = user.churchId
+    ? db.select().from(schema.churches).where(eq(schema.churches.id, user.churchId)).get()
+    : null;
 
   return (
     <div className="stack" style={{ gap: "1.25rem" }}>
@@ -27,6 +32,7 @@ export default async function ProfilePage() {
           email: user.email,
           role: user.role,
           avatar: user.avatar ?? null,
+          churchName: church?.name ?? null,
         }}
       />
     </div>

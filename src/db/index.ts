@@ -8,6 +8,14 @@ import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 
 const DDL = `
+CREATE TABLE IF NOT EXISTS churches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  city TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
@@ -18,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   must_change_pw INTEGER NOT NULL DEFAULT 1,
   active INTEGER NOT NULL DEFAULT 1,
   avatar TEXT,
+  church_id INTEGER REFERENCES churches(id) ON DELETE SET NULL,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -114,6 +123,25 @@ function init() {
   }
   try {
     sqlite.exec("ALTER TABLE users ADD COLUMN avatar TEXT;");
+  } catch {
+    // Columna ya existe
+  }
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS churches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        city TEXT,
+        address TEXT,
+        notes TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      );
+    `);
+  } catch {
+    // Tabla ya existe
+  }
+  try {
+    sqlite.exec("ALTER TABLE users ADD COLUMN church_id INTEGER REFERENCES churches(id) ON DELETE SET NULL;");
   } catch {
     // Columna ya existe
   }
