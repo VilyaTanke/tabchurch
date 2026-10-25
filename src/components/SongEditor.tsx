@@ -1,10 +1,18 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { Globe, Download, Edit3, Eye, Save } from "lucide-react";
+import { Globe, Download, Edit3, Eye, Save, SlidersHorizontal, RotateCcw, Check } from "lucide-react";
 import { saveSong, importSongFromUrl } from "@/app/songs-actions";
 import { SongBody } from "@/components/SongViewer";
-import { KEYS, convertChordsOverLyrics, diatonicChords } from "@/lib/chordpro";
+import {
+  KEYS,
+  convertChordsOverLyrics,
+  diatonicChords,
+  transposeContent,
+  transposeKey,
+  semitonesBetween,
+  keyPrefersFlats,
+} from "@/lib/chordpro";
 
 type Song = {
   id?: number; title?: string; artist?: string | null; originalKey?: string | null; currentKey?: string | null;
@@ -31,7 +39,35 @@ export default function SongEditor({ song }: { song?: Song }) {
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [transposeFeedback, setTransposeFeedback] = useState("");
   const ta = useRef<HTMLTextAreaElement>(null);
+
+  const handleTransposeStep = (delta: number) => {
+    const fromKey = currKey || origKey || "C";
+    const targetKey = transposeKey(fromKey, delta);
+    if (!targetKey) return;
+    const flat = keyPrefersFlats(targetKey);
+    const newContent = transposeContent(content, delta, flat);
+    setContent(newContent);
+    setCurrKey(targetKey);
+    if (!origKey) setOrigKey(fromKey);
+    setTransposeFeedback(`Cifrado transpuesto a ${targetKey}`);
+    setTimeout(() => setTransposeFeedback(""), 2500);
+  };
+
+  const handleTransposeTo = (targetKey: string) => {
+    if (!targetKey) return;
+    const fromKey = currKey || origKey || "C";
+    const steps = semitonesBetween(fromKey, targetKey);
+    if (steps === 0) return;
+    const flat = keyPrefersFlats(targetKey);
+    const newContent = transposeContent(content, steps, flat);
+    setContent(newContent);
+    setCurrKey(targetKey);
+    if (!origKey) setOrigKey(fromKey);
+    setTransposeFeedback(`Cifrado transpuesto a ${targetKey}`);
+    setTimeout(() => setTransposeFeedback(""), 2500);
+  };
 
   const handleImport = async () => {
     if (!importUrl.trim()) return;
@@ -208,6 +244,128 @@ export default function SongEditor({ song }: { song?: Song }) {
               <span>Vista previa</span>
             </button>
           </div>
+        </div>
+
+        {/* Barra de Transposición de Tonalidad del Cifrado */}
+        <div
+          className="row"
+          style={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.55rem 0.85rem",
+            background: "rgba(223, 186, 115, 0.09)",
+            border: "1px solid rgba(212, 175, 55, 0.3)",
+            borderRadius: "12px",
+            flexWrap: "wrap",
+            gap: "0.65rem",
+          }}
+        >
+          <div className="row" style={{ gap: "0.65rem", alignItems: "center", flexWrap: "wrap" }}>
+            <span
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <SlidersHorizontal size={15} />
+              <span>Transponer acordes:</span>
+            </span>
+
+            {/* Controles de tono paso a paso (- / + semitono) */}
+            <div className="zmp-key-control">
+              <button
+                type="button"
+                className="zmp-key-btn"
+                onClick={() => handleTransposeStep(-1)}
+                title="Bajar medio tono (-1 semitono a todos los acordes)"
+                aria-label="Bajar medio tono"
+              >
+                −
+              </button>
+              <div
+                className="zmp-key-display"
+                style={{ cursor: "default" }}
+                title={`Tono actual del cifrado: ${currKey || "—"}`}
+              >
+                <span className="zmp-key-text">{currKey || "—"}</span>
+              </div>
+              <button
+                type="button"
+                className="zmp-key-btn"
+                onClick={() => handleTransposeStep(1)}
+                title="Subir medio tono (+1 semitono a todos los acordes)"
+                aria-label="Subir medio tono"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Selector directo de tono destino */}
+            <div className="row" style={{ gap: "0.35rem", alignItems: "center" }}>
+              <span className="muted" style={{ fontSize: "0.8rem" }}>a:</span>
+              <select
+                className="key-select"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "0.2rem 0.5rem",
+                  fontSize: "0.84rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                }}
+                value={currKey}
+                onChange={(e) => handleTransposeTo(e.target.value)}
+                aria-label="Transponer cifrado directamente a otro tono"
+                title="Elige un tono para transponer todos los acordes automáticamente"
+              >
+                <option value="" disabled>Seleccionar tono…</option>
+                {KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {k} {origKey && k === origKey ? "(original)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botón para restablecer al tono original si está transpuesto */}
+            {origKey && currKey && origKey !== currKey && (
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => handleTransposeTo(origKey)}
+                style={{ fontSize: "0.78rem", padding: "0.2rem 0.55rem" }}
+                title={`Restablecer acordes al tono original (${origKey})`}
+              >
+                <RotateCcw size={12} style={{ marginRight: "3px" }} />
+                <span>Restablecer ({origKey})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Notificación de transposición */}
+          {transposeFeedback && (
+            <span
+              className="badge"
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                color: "#059669",
+                fontSize: "0.78rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+            >
+              <Check size={13} />
+              <span>{transposeFeedback}</span>
+            </span>
+          )}
         </div>
 
         <div className="chip-bar" role="toolbar" aria-label="Insertar acordes">
