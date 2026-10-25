@@ -1007,6 +1007,40 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.sl-row-title-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  max-width: 100%;
+}
+
+.sl-row-title-link:hover {
+  color: var(--accent);
+}
+
+.sl-row-title-link:hover .sl-row-title {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 175, 55, 0.6);
+}
+
+.sl-row-title-link .sl-row-ext-icon {
+  opacity: 0.35;
+  color: var(--accent);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sl-row-title-link:hover .sl-row-ext-icon {
+  opacity: 1;
+  transform: translate(1px, -1px);
 }
 
 .sl-row-artist {

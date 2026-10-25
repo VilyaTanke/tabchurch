@@ -9,15 +9,32 @@ import SongViewer from "@/components/SongViewer";
 import PrintButton from "@/components/PrintButton";
 import ZamarMiniPlayer from "@/components/ZamarMiniPlayer";
 
-export default async function SongPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SongPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ fromList?: string; key?: string }>;
+}) {
   const user = await requireUser();
   const { id } = await params;
+  const { fromList, key: keyParam } = (await searchParams) || {};
+
   const song = db
     .select()
     .from(schema.songs)
     .where(eq(schema.songs.id, Number(id)))
     .get();
   if (!song) notFound();
+
+  // Buscar información de la lista si venimos de una lista creada
+  const fromSetlist = fromList
+    ? db
+        .select({ id: schema.setlists.id, name: schema.setlists.name })
+        .from(schema.setlists)
+        .where(eq(schema.setlists.id, Number(fromList)))
+        .get()
+    : null;
 
   // Buscar si esta canción tiene pista de audio vinculada en la galería
   const linkedTrack = db
@@ -29,19 +46,19 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
 
   const canEditOrDelete = canManageSongs(user);
 
-  const activeKey = song.currentKey || song.originalKey;
-  const hasDiffKey = Boolean(song.originalKey && song.currentKey && song.originalKey !== song.currentKey);
+  const activeKey = keyParam || song.currentKey || song.originalKey;
+  const hasDiffKey = Boolean(song.originalKey && activeKey && song.originalKey !== activeKey);
 
   return (
     <div className="stack">
       <div>
         <Link
-          href="/canciones"
+          href={fromSetlist ? `/listas/${fromSetlist.id}` : "/canciones"}
           className="muted"
           style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
         >
           <ArrowLeft size={14} />
-          <span>Canciones</span>
+          <span>{fromSetlist ? `Volver a lista (${fromSetlist.name})` : "Canciones"}</span>
         </Link>
         <h1>{song.title}</h1>
         <p className="muted" style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", marginTop: "0.25rem" }}>
@@ -66,6 +83,23 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
             >
               Original: {song.originalKey}
             </span>
+          )}
+          {fromSetlist && (
+            <Link
+              href={`/listas/${fromSetlist.id}`}
+              className="badge"
+              style={{
+                background: "rgba(223, 186, 115, 0.18)",
+                color: "var(--accent)",
+                border: "1px solid rgba(212, 175, 55, 0.35)",
+                fontSize: "0.78rem",
+                padding: "0.2rem 0.55rem",
+                textDecoration: "none",
+              }}
+              title="Volver a la lista de alabanza"
+            >
+              Lista: {fromSetlist.name}
+            </Link>
           )}
         </p>
       </div>
@@ -123,7 +157,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
         songId={song.id}
         content={song.contentChordpro}
         originalKey={song.originalKey}
-        currentKey={song.currentKey}
+        currentKey={activeKey}
         canSaveKey={canEditOrDelete}
       />
       <div className="row">

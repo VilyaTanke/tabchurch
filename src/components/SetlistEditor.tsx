@@ -19,6 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Link from "next/link";
 import {
   GripVertical,
   Trash2,
@@ -29,6 +30,8 @@ import {
   Columns2,
   ListOrdered,
   Music,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import {
@@ -116,7 +119,14 @@ function Row({
         </button>
 
         <div className="sl-row-info grow">
-          <strong className="sl-row-title">{item.title}</strong>
+          <Link
+            href={`/canciones/${item.songId}?fromList=${setlistId}${item.keyOverride ? `&key=${encodeURIComponent(item.keyOverride)}` : ""}`}
+            className="sl-row-title-link"
+            title={`Ver cifrado de ${item.title}`}
+          >
+            <strong className="sl-row-title">{item.title}</strong>
+            <ExternalLink size={13} className="sl-row-ext-icon" />
+          </Link>
           <div className="sl-row-artist">{item.artist || "Sin artista"}</div>
         </div>
 
@@ -146,6 +156,15 @@ function Row({
 
       {/* Barra de configuración táctil y lectura */}
       <div className="sl-row-actions">
+        <Link
+          href={`/canciones/${item.songId}?fromList=${setlistId}${item.keyOverride ? `&key=${encodeURIComponent(item.keyOverride)}` : ""}`}
+          className="btn ghost small sl-action-btn"
+          title="Ver cifrado completo de la canción"
+        >
+          <Eye size={15} />
+          <span>Ver cifrado</span>
+        </Link>
+
         <button
           type="button"
           className={`btn ghost small sl-action-btn ${showNotes || item.notes ? "active" : ""}`}
@@ -406,7 +425,14 @@ export default function SetlistEditor({
               <li key={s.id} className="sl-library-row">
                 <div className="grow" style={{ minWidth: 0 }}>
                   <div className="row" style={{ gap: "0.45rem", alignItems: "center" }}>
-                    <strong className="sl-row-title">{s.title}</strong>
+                    <Link
+                      href={`/canciones/${s.id}?fromList=${setlistId}`}
+                      className="sl-row-title-link"
+                      title={`Ver cifrado de ${s.title}`}
+                    >
+                      <strong className="sl-row-title">{s.title}</strong>
+                      <ExternalLink size={12} className="sl-row-ext-icon" />
+                    </Link>
                     {tracksBySongId?.[s.id] && (
                       <span
                         className="badge"
