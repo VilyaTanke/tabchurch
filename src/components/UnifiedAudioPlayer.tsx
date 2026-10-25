@@ -286,7 +286,7 @@ export default function UnifiedAudioPlayer({
           </div>
 
           {/* Control de Volumen */}
-          <div className="player-volume-box">
+          <div className="player-volume-box hide-phone">
             <button
               type="button"
               className="player-vol-icon-btn"
@@ -317,7 +317,7 @@ export default function UnifiedAudioPlayer({
           </div>
 
           {/* Acciones Rápidas */}
-          <div className="player-quick-actions">
+          <div className="player-quick-actions hide-sm">
             <a
               href={`/api/tracks/${track.id}?download=1`}
               className="btn ghost small player-action-icon"

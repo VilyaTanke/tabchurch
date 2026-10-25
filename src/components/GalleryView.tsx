@@ -392,23 +392,23 @@ export default function GalleryView({
   };
 
   return (
-    <div className="stack" style={{ paddingBottom: activeTrack ? "120px" : "2rem" }}>
+    <div className="stack zamar-page-container" style={{ paddingBottom: activeTrack ? "140px" : "2rem" }}>
       {/* Encabezado Principal */}
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <div className="zamar-header-row">
         <div>
           <h1 style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
             <SlidersHorizontal size={26} style={{ color: "var(--accent)" }} />
             <span>Zamar</span>
           </h1>
           <p className="muted" style={{ fontSize: "0.85rem", marginTop: "2px" }}>
-            {tracks.length} {tracks.length === 1 ? "canción" : "canciones"} en la lista de reproducción · Reproductor unificado con transpositor y guardado de MP3
+            {tracks.length} {tracks.length === 1 ? "canción" : "canciones"} en la lista · Reproductor unificado con transpositor y guardado de MP3
           </p>
         </div>
 
         {canManage && (
           <button
             type="button"
-            className="btn gold"
+            className="btn gold zamar-add-btn"
             onClick={() => setIsModalOpen(true)}
             style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
           >
@@ -419,8 +419,8 @@ export default function GalleryView({
       </div>
 
       {/* Buscador, Filtros y Selector de Vista */}
-      <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: "240px" }}>
+      <div className="zamar-controls-bar">
+        <div className="zamar-search-box">
           <input
             className="input"
             placeholder="Buscar por título o artista..."
@@ -458,36 +458,38 @@ export default function GalleryView({
           )}
         </div>
 
-        <button
-          type="button"
-          className={`btn small ${filterStemsOnly ? "" : "ghost"}`}
-          onClick={() => setFilterStemsOnly(!filterStemsOnly)}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-        >
-          <Sparkles size={14} />
-          <span>Solo con Stems</span>
-        </button>
+        <div className="zamar-filters-right">
+          <button
+            type="button"
+            className={`btn small ${filterStemsOnly ? "" : "ghost"}`}
+            onClick={() => setFilterStemsOnly(!filterStemsOnly)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+          >
+            <Sparkles size={14} />
+            <span>Solo con Stems</span>
+          </button>
 
-        {/* Selector de modo de vista: Lista vs Tarjetas */}
-        <div className="view-mode-toggle" role="group" aria-label="Modo de visualización">
-          <button
-            type="button"
-            className={`view-mode-btn ${viewMode === "playlist" ? "active" : ""}`}
-            onClick={() => setViewMode("playlist")}
-            title="Vista de Lista de Reproducción"
-          >
-            <ListMusic size={16} />
-            <span>Lista</span>
-          </button>
-          <button
-            type="button"
-            className={`view-mode-btn ${viewMode === "grid" ? "active" : ""}`}
-            onClick={() => setViewMode("grid")}
-            title="Vista de Tarjetas"
-          >
-            <LayoutGrid size={16} />
-            <span>Tarjetas</span>
-          </button>
+          {/* Selector de modo de vista: Lista vs Tarjetas */}
+          <div className="view-mode-toggle" role="group" aria-label="Modo de visualización">
+            <button
+              type="button"
+              className={`view-mode-btn ${viewMode === "playlist" ? "active" : ""}`}
+              onClick={() => setViewMode("playlist")}
+              title="Vista de Lista de Reproducción"
+            >
+              <ListMusic size={16} />
+              <span>Lista</span>
+            </button>
+            <button
+              type="button"
+              className={`view-mode-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => setViewMode("grid")}
+              title="Vista de Tarjetas"
+            >
+              <LayoutGrid size={16} />
+              <span>Tarjetas</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -566,10 +568,18 @@ export default function GalleryView({
 
                   {/* Título, Artista y Canción vinculada */}
                   <div className="col-title">
-                    <strong className="playlist-track-title">{track.title}</strong>
+                    <div className="playlist-title-line">
+                      <strong className="playlist-track-title">{track.title}</strong>
+                      {baseKey && (
+                        <span className="badge playlist-badge-inline" style={{ background: "rgba(223, 186, 115, 0.15)", color: "var(--accent)" }}>
+                          {baseKey}
+                        </span>
+                      )}
+                    </div>
                     <div className="playlist-track-sub">
                       <span>{track.artist || "Sin artista"}</span>
-                      {track.bpm ? <span>· {track.bpm} BPM</span> : null}
+                      {track.durationSec ? <span className="playlist-sub-duration">· {formatDuration(track.durationSec)}</span> : null}
+                      {track.bpm ? <span className="hide-xs">· {track.bpm} BPM</span> : null}
                       {track.song && (
                         <Link
                           href={`/canciones/${track.song.id}`}
@@ -580,6 +590,11 @@ export default function GalleryView({
                           <ExternalLink size={10} />
                           <span>Acordes</span>
                         </Link>
+                      )}
+                      {hasStems && (
+                        <span className="badge playlist-stems-inline" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#059669" }}>
+                          {stems.length} Stems
+                        </span>
                       )}
                     </div>
                   </div>
@@ -621,26 +636,26 @@ export default function GalleryView({
                   <div className="col-actions" onClick={(e) => e.stopPropagation()}>
                     <Link
                       href={`/galeria/${track.id}/estudio`}
-                      className="btn ghost small"
+                      className="btn ghost small playlist-action-btn"
                       title="Abrir en Estudio Z (Stems)"
                     >
-                      <Sliders size={13} />
-                      <span className="hide-sm">Estudio Z</span>
+                      <Sliders size={14} />
+                      <span className="hide-md">Estudio Z</span>
                     </Link>
 
                     <a
                       href={`/api/tracks/${track.id}?download=1`}
-                      className="btn ghost small"
+                      className="btn ghost small playlist-action-btn"
                       title="Descargar MP3"
                       download
                     >
-                      <Download size={13} />
+                      <Download size={14} />
                     </a>
 
                     {canManage && (
                       <button
                         type="button"
-                        className="btn danger small"
+                        className="btn danger small playlist-action-btn"
                         onClick={async () => {
                           if (!confirm(`¿Eliminar definitivamente "${track.title}"?`)) return;
                           try {
@@ -652,7 +667,7 @@ export default function GalleryView({
                         }}
                         title="Eliminar canción"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>

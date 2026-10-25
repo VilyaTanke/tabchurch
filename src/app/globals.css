@@ -2250,8 +2250,8 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   border-color: rgba(223, 186, 115, 0.35);
 }
 .playlist-play-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: none;
   border: none;
@@ -2284,6 +2284,12 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .playlist-row.active .playlist-play-btn {
   color: var(--accent);
 }
+.playlist-title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
 .playlist-track-title {
   font-size: 0.95rem;
   color: var(--text);
@@ -2293,6 +2299,14 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.playlist-badge-inline {
+  display: none;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
 .playlist-row.active .playlist-track-title {
   color: var(--accent);
 }
@@ -2301,8 +2315,18 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   color: var(--muted);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
   margin-top: 2px;
+}
+.playlist-sub-duration {
+  display: none;
+}
+.playlist-stems-inline {
+  display: none;
+  font-size: 0.68rem;
+  padding: 0.05rem 0.35rem;
+  font-weight: 500;
 }
 .playlist-song-link {
   color: var(--accent);
@@ -2315,6 +2339,26 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .playlist-song-link:hover {
   text-decoration: underline;
   opacity: 1;
+}
+
+/* Acciones Horizontales */
+.col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+.playlist-action-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem !important;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
 }
 
 /* Animación de Barras de Ecualizador */
@@ -2687,30 +2731,203 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   padding: 0.35rem 0.45rem !important;
 }
 
-/* Responsividad para móviles y pantallas pequeñas */
-@media (max-width: 960px) {
-  .unified-player-inner {
-    grid-template-columns: 1fr;
-    gap: 0.65rem;
+/* ==========================================================================
+   RESPONSIVIDAD PARA TABLETS Y TELÉFONOS (ZAMAR Y REPRODUCTOR)
+   ========================================================================== */
+.zamar-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.zamar-controls-bar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+.zamar-search-box {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+.zamar-filters-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  /* Controles y cabecera en Tablet */
+  .zamar-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .player-track-info {
-    justify-content: space-between;
+  .zamar-search-box {
+    width: 100%;
+    min-width: unset;
   }
-  .player-right-tools {
+  .zamar-filters-right {
     justify-content: space-between;
     width: 100%;
   }
-  .playlist-table-header {
-    grid-template-columns: 36px 1fr 60px 80px;
+
+  /* LISTA DE CANCIONES EN TABLET Y MÓVIL (Estilo Spotify/Apple Music) */
+  .playlist-table-wrapper {
+    overflow-x: visible;
   }
-  .col-stems, .col-duration {
-    display: none;
+  .playlist-table-header {
+    display: none; /* Elimina la cabecera rígida que desborda */
   }
   .playlist-row {
-    grid-template-columns: 36px 1fr 60px 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 10px;
+    border-bottom: 1px solid rgba(223, 186, 115, 0.08);
+    margin-bottom: 2px;
+  }
+  .col-num {
+    flex-shrink: 0;
+    width: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .col-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .playlist-track-title {
+    font-size: 0.94rem;
+  }
+  .playlist-badge-inline {
+    display: inline-block;
+  }
+  .playlist-sub-duration {
+    display: inline;
+  }
+  .playlist-stems-inline {
+    display: inline-block;
+  }
+  .col-key,
+  .col-duration,
+  .col-stems {
+    display: none !important;
+  }
+
+  /* Acciones horizontales compactas (sin apilamiento vertical) */
+  .col-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+  .playlist-action-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+  .hide-md {
+    display: none !important;
   }
   .hide-sm {
-    display: none;
+    display: none !important;
+  }
+
+  /* REPRODUCTOR FLOTANTE INFERIOR EN TABLET */
+  .unified-player-dock {
+    padding: 0.65rem 1rem;
+  }
+  .unified-player-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .player-track-info {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .player-center-controls {
+    width: 100%;
+  }
+  .player-scrub-row {
+    max-width: 100%;
+  }
+  .player-right-tools {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgba(223, 186, 115, 0.12);
+  }
+  .grid.two {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .zamar-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .zamar-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .playlist-row {
+    padding: 0.65rem 0.5rem;
+    gap: 0.5rem;
+  }
+  .col-num {
+    width: 30px;
+  }
+  .playlist-action-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .hide-xs {
+    display: none !important;
+  }
+  .hide-phone {
+    display: none !important;
+  }
+
+  /* REPRODUCTOR EN TELÉFONO */
+  .unified-player-dock {
+    padding: 0.55rem 0.75rem;
+  }
+  .player-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .player-title {
+    font-size: 0.88rem;
+  }
+  .player-buttons-row {
+    gap: 0.6rem;
+  }
+  .player-play-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .player-transposer-box {
+    gap: 0.25rem;
+  }
+  .player-save-key-btn {
+    font-size: 0.72rem !important;
+    padding: 0.2rem 0.45rem !important;
   }
 }
 
