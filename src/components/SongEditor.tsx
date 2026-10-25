@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { Globe, Download, Edit3, Eye, Save, SlidersHorizontal, RotateCcw, Check } from "lucide-react";
+import { useActionState, useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Globe, Download, Edit3, Eye, Save, SlidersHorizontal, RotateCcw, Check, X, AlertTriangle } from "lucide-react";
 import { saveSong, importSongFromUrl } from "@/app/songs-actions";
 import { SongBody } from "@/components/SongViewer";
 import {
@@ -29,7 +30,9 @@ Que a un [F]infeliz [C]salvó
 `;
 
 export default function SongEditor({ song }: { song?: Song }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(saveSong, undefined);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [title, setTitle] = useState(song?.title ?? "");
   const [artist, setArtist] = useState(song?.artist ?? "");
   const [content, setContent] = useState(song?.contentChordpro ?? "");
@@ -41,6 +44,26 @@ export default function SongEditor({ song }: { song?: Song }) {
   const [importError, setImportError] = useState("");
   const [transposeFeedback, setTransposeFeedback] = useState("");
   const ta = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!showCancelModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowCancelModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showCancelModal]);
+
+  const handleExitWithoutSaving = () => {
+    setShowCancelModal(false);
+    if (song?.id) {
+      router.push(`/canciones/${song.id}`);
+    } else {
+      router.push("/canciones");
+    }
+  };
 
   const handleTransposeStep = (delta: number) => {
     const fromKey = currKey || origKey || "C";
@@ -118,6 +141,29 @@ export default function SongEditor({ song }: { song?: Song }) {
   return (
     <form action={action} className="stack">
       {song?.id && <input type="hidden" name="id" value={song.id} />}
+
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setShowCancelModal(true)}
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <X size={16} />
+          <span>Cancelar</span>
+        </button>
+
+        <button
+          type="submit"
+          className="btn"
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Save size={16} />
+          <span>{pending ? "Guardando…" : "Guardar canción"}</span>
+        </button>
+      </div>
 
       {/* Importador Rápido por URL */}
       {!song?.id && (
@@ -405,8 +451,9 @@ export default function SongEditor({ song }: { song?: Song }) {
       </section>
 
       {state?.error && <div className="alert error" role="alert">{state.error}</div>}
-      <div className="row">
+      <div className="row" style={{ gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
         <button
+          type="submit"
           className="btn"
           disabled={pending}
           style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
@@ -414,7 +461,81 @@ export default function SongEditor({ song }: { song?: Song }) {
           <Save size={16} />
           <span>{pending ? "Guardando…" : "Guardar canción"}</span>
         </button>
+
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setShowCancelModal(true)}
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <X size={16} />
+          <span>Cancelar</span>
+        </button>
       </div>
+
+      {showCancelModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowCancelModal(false)}
+          style={{ zIndex: 999 }}
+        >
+          <div
+            className="modal-box card stack"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "440px", width: "92%", padding: "1.75rem", gap: "1.25rem" }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="row" style={{ gap: "0.85rem", alignItems: "flex-start" }}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  color: "var(--danger, #ef4444)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginTop: "0.15rem",
+                }}
+              >
+                <AlertTriangle size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
+                  ¿Desea salir sin guardar cambios?
+                </h3>
+                <p className="muted" style={{ margin: "0.4rem 0 0", fontSize: "0.9rem" }}>
+                  Los cambios realizados en el cifrado no se guardarán.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="row"
+              style={{ justifyContent: "flex-end", gap: "0.75rem" }}
+            >
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setShowCancelModal(false)}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={handleExitWithoutSaving}
+              >
+                Sí
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
