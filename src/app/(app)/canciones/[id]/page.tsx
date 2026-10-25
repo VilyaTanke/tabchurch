@@ -138,6 +138,8 @@ export default async function SongPage({
               trackId={linkedTrack.id}
               trackTitle={linkedTrack.title}
               durationSec={linkedTrack.durationSec}
+              baseKey={song.originalKey}
+              currentKey={activeKey}
               variant="banner"
             />
             <Link

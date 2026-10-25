@@ -12,15 +12,25 @@ import {
   Music,
 } from "lucide-react";
 import { formatDuration } from "@/lib/stems";
+import { transposeKey, semitonesBetween } from "@/lib/chordpro";
+import {
+  SoundTouchChannel,
+  getSharedAudioContext,
+  ensureAudioContextResumed,
+  loadAudioBuffer,
+} from "@/lib/audio-engine";
 
 export interface ZamarMiniPlayerProps {
   trackId: number;
   trackTitle?: string;
   artist?: string | null;
   durationSec?: number | null;
+  baseKey?: string | null;
+  currentKey?: string | null;
   variant?: "inline" | "banner";
   showStudioLink?: boolean;
   className?: string;
+  onKeyChange?: (newKey: string, semitones: number) => void;
 }
 
 export default function ZamarMiniPlayer({
@@ -28,17 +38,28 @@ export default function ZamarMiniPlayer({
   trackTitle,
   artist,
   durationSec,
+  baseKey,
+  currentKey,
   variant = "inline",
   showStudioLink = false,
   className = "",
+  onKeyChange,
 }: ZamarMiniPlayerProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const channelRef = useRef<SoundTouchChannel | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number>(durationSec || 0);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
+
+  // Calcular semitonos iniciales basados en baseKey y currentKey
+  const [semitones, setSemitones] = useState<number>(() => {
+    if (baseKey && currentKey) {
+      return semitonesBetween(baseKey, currentKey);
+    }
+    return 0;
+  });
 
   // Identificador único para coordinar un único reproductor activo
   const playerIdRef = useRef(
@@ -50,8 +71,8 @@ export default function ZamarMiniPlayer({
     const handleGlobalPlay = (e: Event) => {
       const customEvent = e as CustomEvent<{ playerId: string; trackId: number }>;
       if (customEvent.detail?.playerId !== playerIdRef.current) {
-        if (audioRef.current && !audioRef.current.paused) {
-          audioRef.current.pause();
+        if (channelRef.current && channelRef.current.isPlaying) {
+          channelRef.current.isPlaying = false;
           setIsPlaying(false);
         }
       }
@@ -63,64 +84,127 @@ export default function ZamarMiniPlayer({
     };
   }, []);
 
-  // Actualizar duración si cambia la prop
+  // Escuchar sincronización de tono externa (por ejemplo, desde SongViewer)
+  useEffect(() => {
+    const handleKeySync = (e: Event) => {
+      const detail = (e as CustomEvent<{ key?: string; semitones?: number; source?: string }>).detail;
+      if (detail && detail.source !== "mini-player" && typeof detail.semitones === "number") {
+        setSemitones(detail.semitones);
+        if (channelRef.current) {
+          channelRef.current.setSemitones(detail.semitones);
+        }
+      }
+    };
+    window.addEventListener("zamar-key-sync", handleKeySync);
+    return () => window.removeEventListener("zamar-key-sync", handleKeySync);
+  }, []);
+
+  // Actualizar semitonos si cambia currentKey o baseKey desde props (ej. selector TONO)
+  useEffect(() => {
+    if (baseKey && currentKey) {
+      const diff = semitonesBetween(baseKey, currentKey);
+      setSemitones(diff);
+      if (channelRef.current) {
+        channelRef.current.setSemitones(diff);
+      }
+    }
+  }, [baseKey, currentKey]);
+
+  // Actualizar duración si cambia durationSec
   useEffect(() => {
     if (durationSec && durationSec > 0 && duration === 0) {
       setDuration(durationSec);
     }
   }, [durationSec, duration]);
 
-  const togglePlay = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
+  // Loop suave de animación para el avance de la barra de tiempo
+  useEffect(() => {
+    let animId: number;
+    const tick = () => {
+      if (channelRef.current && isPlaying && !isSeeking) {
+        setCurrentTime(channelRef.current.getCurrentTime());
+      }
+      if (isPlaying) {
+        animId = requestAnimationFrame(tick);
+      }
+    };
     if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      // Notificar a todos los demás reproductores para que se silencien
+      animId = requestAnimationFrame(tick);
+    }
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, isSeeking]);
+
+  // Limpieza al desmontar
+  useEffect(() => {
+    return () => {
+      if (channelRef.current) {
+        channelRef.current.destroy();
+        channelRef.current = null;
+      }
+    };
+  }, []);
+
+  const togglePlay = useCallback(async () => {
+    try {
+      if (channelRef.current) {
+        if (isPlaying) {
+          channelRef.current.isPlaying = false;
+          setIsPlaying(false);
+        } else {
+          const ctx = getSharedAudioContext();
+          await ensureAudioContextResumed(ctx);
+          window.dispatchEvent(
+            new CustomEvent("zamar-audio-play", {
+              detail: { playerId: playerIdRef.current, trackId },
+            })
+          );
+          channelRef.current.isPlaying = true;
+          setIsPlaying(true);
+        }
+        return;
+      }
+
+      // Carga inicial del buffer de audio con SoundTouch (motor WSOLA)
+      setIsLoading(true);
+      const ctx = getSharedAudioContext();
+      await ensureAudioContextResumed(ctx);
+
       window.dispatchEvent(
         new CustomEvent("zamar-audio-play", {
           detail: { playerId: playerIdRef.current, trackId },
         })
       );
 
-      try {
-        setIsLoading(true);
-        await audio.play();
-        setIsPlaying(true);
-      } catch (err) {
-        console.warn("Reproducción impedida o interrumpida:", err);
+      const buffer = await loadAudioBuffer(`/api/tracks/${trackId}`, ctx);
+      setDuration(buffer.duration);
+
+      const ch = new SoundTouchChannel(ctx, buffer, ctx.destination);
+      ch.setSemitones(semitones);
+      ch.setVolume(isMuted ? 0 : 1.0);
+      ch.seek(currentTime);
+      ch.onEnded = () => {
         setIsPlaying(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }, [isPlaying, trackId]);
+        setCurrentTime(0);
+        ch.seek(0);
+      };
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current && !isSeeking) {
-      setCurrentTime(audioRef.current.currentTime);
+      channelRef.current = ch;
+      ch.isPlaying = true;
+      setIsPlaying(true);
+    } catch (err) {
+      console.error("Error al reproducir pista con SoundTouch:", err);
+      setIsPlaying(false);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current?.duration && !isNaN(audioRef.current.duration)) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-    }
-  };
+  }, [isPlaying, trackId, semitones, isMuted, currentTime]);
 
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = Number(e.target.value);
     setCurrentTime(newTime);
+    if (channelRef.current) {
+      channelRef.current.seek(newTime);
+    }
   };
 
   const handleSeekStart = () => {
@@ -130,18 +214,54 @@ export default function ZamarMiniPlayer({
   const handleSeekEnd = (e: React.MouseEvent<HTMLInputElement> | React.TouchEvent<HTMLInputElement>) => {
     setIsSeeking(false);
     const newTime = Number((e.target as HTMLInputElement).value);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
+    if (channelRef.current) {
+      channelRef.current.seek(newTime);
     }
   };
 
   const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+    const next = !isMuted;
+    setIsMuted(next);
+    if (channelRef.current) {
+      channelRef.current.setMuted(next);
     }
   };
 
+  // Función para cambiar tonalidad (+ / - semitonos)
+  const changePitch = (delta: number) => {
+    const next = Math.max(-12, Math.min(12, semitones + delta));
+    setSemitones(next);
+    if (channelRef.current) {
+      channelRef.current.setSemitones(next);
+    }
+    const nextKey = baseKey ? transposeKey(baseKey, next) : null;
+    if (nextKey && onKeyChange) {
+      onKeyChange(nextKey, next);
+    }
+    window.dispatchEvent(
+      new CustomEvent("zamar-key-sync", {
+        detail: { trackId, key: nextKey, semitones: next, source: "mini-player" },
+      })
+    );
+  };
+
+  // Función para restablecer al tono original
+  const resetPitch = () => {
+    setSemitones(0);
+    if (channelRef.current) {
+      channelRef.current.setSemitones(0);
+    }
+    if (baseKey && onKeyChange) {
+      onKeyChange(baseKey, 0);
+    }
+    window.dispatchEvent(
+      new CustomEvent("zamar-key-sync", {
+        detail: { trackId, key: baseKey, semitones: 0, source: "mini-player" },
+      })
+    );
+  };
+
+  const displayedKey = baseKey ? transposeKey(baseKey, semitones) : null;
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
@@ -150,21 +270,6 @@ export default function ZamarMiniPlayer({
       role="region"
       aria-label={`Reproductor MP3 de Zamar ${trackTitle || ""}`}
     >
-      <audio
-        ref={audioRef}
-        src={`/api/tracks/${trackId}`}
-        preload="metadata"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onWaiting={() => setIsLoading(true)}
-        onPlaying={() => {
-          setIsLoading(false);
-          setIsPlaying(true);
-        }}
-        onPause={() => setIsPlaying(false)}
-        onEnded={handleEnded}
-      />
-
       {/* Botón principal de Reproducir / Pausar */}
       <button
         type="button"
@@ -210,6 +315,49 @@ export default function ZamarMiniPlayer({
           }}
         />
         <span className="zmp-time">{formatDuration(duration)}</span>
+      </div>
+
+      {/* Botones de función para cambiar tonalidad (Transposición en tiempo real) */}
+      <div className="zmp-key-control" title="Cambiar tonalidad de la canción en tiempo real">
+        <button
+          type="button"
+          className="zmp-key-btn"
+          onClick={() => changePitch(-1)}
+          aria-label="Bajar medio tono"
+          title="Bajar 1 semitono (-)"
+        >
+          −
+        </button>
+
+        <button
+          type="button"
+          className={`zmp-key-display ${semitones !== 0 ? "transposed" : ""}`}
+          onClick={resetPitch}
+          title={
+            semitones === 0
+              ? `Tono original: ${displayedKey || "—"}`
+              : `Tono modificado (${semitones > 0 ? `+${semitones}` : semitones} semitonos). Clic para restablecer original`
+          }
+        >
+          <span className="zmp-key-text">
+            {displayedKey || (semitones === 0 ? "0" : semitones > 0 ? `+${semitones}` : semitones)}
+          </span>
+          {semitones !== 0 && (
+            <span className="zmp-key-offset">
+              {semitones > 0 ? `+${semitones}` : semitones}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className="zmp-key-btn"
+          onClick={() => changePitch(1)}
+          aria-label="Subir medio tono"
+          title="Subir 1 semitono (+)"
+        >
+          +
+        </button>
       </div>
 
       {/* Controles secundarios: Mute y enlace a Estudio Z opcional */}

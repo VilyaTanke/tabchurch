@@ -141,13 +141,16 @@ function Row({
         </button>
       </div>
 
-      {/* Mini reproductor de Zamar si tiene pista MP3 vinculada */}
+      {/* Mini reproductor de Zamar si tiene pista MP3 vinculada con cambio de tonalidad */}
       {item.audioTrack && (
         <div className="sl-row-player">
           <ZamarMiniPlayer
             trackId={item.audioTrack.id}
             trackTitle={item.audioTrack.title}
             durationSec={item.audioTrack.durationSec}
+            baseKey={item.originalKey}
+            currentKey={item.keyOverride ?? item.originalKey}
+            onKeyChange={(newKey) => onKey(newKey)}
             showStudioLink
             variant="inline"
           />

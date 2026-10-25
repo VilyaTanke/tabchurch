@@ -1296,6 +1296,84 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   transition: transform 0.1s ease;
 }
 
+/* Controles de función para cambio de tonalidad en el reproductor */
+.zmp-key-control {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2, rgba(255, 255, 255, 0.75));
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  border-radius: 9px;
+  padding: 1px;
+  gap: 1px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.zmp-key-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+  width: 22px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+
+.zmp-key-btn:hover {
+  background: rgba(223, 186, 115, 0.28);
+  color: var(--accent);
+}
+
+.zmp-key-btn:active {
+  transform: scale(0.92);
+}
+
+.zmp-key-display {
+  background: transparent;
+  border: none;
+  padding: 0 0.45rem;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.12s ease;
+}
+
+.zmp-key-display:hover {
+  background: rgba(223, 186, 115, 0.18);
+}
+
+.zmp-key-display.transposed {
+  background: rgba(223, 186, 115, 0.26);
+}
+
+.zmp-key-text {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.zmp-key-offset {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #8c641a;
+  background: rgba(255, 200, 107, 0.35);
+  padding: 0.05rem 0.25rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
 .zmp-tools {
   display: flex;
   align-items: center;

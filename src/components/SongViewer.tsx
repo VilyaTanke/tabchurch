@@ -150,11 +150,31 @@ export default function SongViewer({
   const activeKey = transposeKey(originalKey, steps);
 
   const bump = (d: number) => {
-    setSteps((s) => (((s + d + 6) % 12) + 12) % 12 - 6);
+    const nextSteps = (((steps + d + 6) % 12) + 12) % 12 - 6;
+    setSteps(nextSteps);
     setSavedFeedback(false);
+    const nextKey = transposeKey(originalKey, nextSteps);
+    window.dispatchEvent(
+      new CustomEvent("zamar-key-sync", {
+        detail: { key: nextKey, semitones: nextSteps, source: "song-viewer" },
+      })
+    );
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches)
       animate(".key-badge", { scale: [1.3, 1], duration: 500, ease: "outElastic(1, .5)" });
   };
+
+  // Sincronizar tono si el usuario lo cambia desde el reproductor mini de Zamar
+  useEffect(() => {
+    const handleKeySync = (e: Event) => {
+      const detail = (e as CustomEvent<{ key?: string; semitones?: number; source?: string }>).detail;
+      if (detail && detail.source !== "song-viewer" && typeof detail.semitones === "number") {
+        setSteps(detail.semitones);
+        setSavedFeedback(false);
+      }
+    };
+    window.addEventListener("zamar-key-sync", handleKeySync);
+    return () => window.removeEventListener("zamar-key-sync", handleKeySync);
+  }, []);
 
   const handleSaveKey = () => {
     if (!songId || !activeKey) return;
