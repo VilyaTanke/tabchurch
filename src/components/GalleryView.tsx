@@ -93,6 +93,21 @@ export default function GalleryView({
     };
   }, []);
 
+  // Coordinación con reproductores mini de Zamar
+  useEffect(() => {
+    const handleGlobalPlay = (e: Event) => {
+      const customEvent = e as CustomEvent<{ playerId: string; trackId: number }>;
+      if (customEvent.detail?.playerId !== "gallery-master") {
+        if (playerChannelRef.current && isPlaying) {
+          playerChannelRef.current.isPlaying = false;
+          setIsPlaying(false);
+        }
+      }
+    };
+    window.addEventListener("zamar-audio-play", handleGlobalPlay);
+    return () => window.removeEventListener("zamar-audio-play", handleGlobalPlay);
+  }, [isPlaying]);
+
   // Actualizar semitonos en tiempo real en el motor SoundTouch
   useEffect(() => {
     if (playerChannelRef.current) {
@@ -159,6 +174,11 @@ export default function GalleryView({
         setIsLoadingAudio(false);
 
         if (autoStart) {
+          window.dispatchEvent(
+            new CustomEvent("zamar-audio-play", {
+              detail: { playerId: "gallery-master", trackId: trackToPlay.id },
+            })
+          );
           ch.isPlaying = true;
           setIsPlaying(true);
         } else {

@@ -7,6 +7,7 @@ import { canManageSongs, requireUser } from "@/lib/auth";
 import { deleteSong } from "@/app/songs-actions";
 import SongViewer from "@/components/SongViewer";
 import PrintButton from "@/components/PrintButton";
+import ZamarMiniPlayer from "@/components/ZamarMiniPlayer";
 
 export default async function SongPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -75,14 +76,16 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
           style={{
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "0.85rem",
             background: "linear-gradient(90deg, rgba(223, 186, 115, 0.12) 0%, rgba(180, 83, 9, 0.05) 100%)",
             borderColor: "rgba(212, 175, 55, 0.35)",
+            flexWrap: "wrap",
           }}
         >
-          <div className="row" style={{ gap: "0.6rem" }}>
-            <Radio size={20} style={{ color: "var(--accent)" }} />
+          <div className="row" style={{ gap: "0.6rem", minWidth: 220 }}>
+            <Radio size={20} style={{ color: "var(--accent)", flexShrink: 0 }} />
             <div>
-              <div className="row" style={{ gap: "0.4rem" }}>
+              <div className="row" style={{ gap: "0.4rem", alignItems: "center" }}>
                 <strong style={{ fontSize: "0.95rem" }}>Pista de Audio MP3 disponible</strong>
                 {linkedTrack.stemsStatus === "done" && (
                   <span className="badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#059669" }}>
@@ -95,14 +98,23 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
               </p>
             </div>
           </div>
-          <Link
-            href={`/galeria/${linkedTrack.id}/estudio`}
-            className="btn small gold"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-          >
-            <SlidersHorizontal size={14} />
-            <span>Abrir en Estudio Z</span>
-          </Link>
+
+          <div className="row" style={{ gap: "0.65rem", alignItems: "center", flexWrap: "wrap" }}>
+            <ZamarMiniPlayer
+              trackId={linkedTrack.id}
+              trackTitle={linkedTrack.title}
+              durationSec={linkedTrack.durationSec}
+              variant="banner"
+            />
+            <Link
+              href={`/galeria/${linkedTrack.id}/estudio`}
+              className="btn small gold"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}
+            >
+              <SlidersHorizontal size={14} />
+              <span>Abrir en Estudio Z</span>
+            </Link>
+          </div>
         </div>
       )}
 

@@ -1125,6 +1125,180 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   box-shadow: 0 0 0 3px rgba(223, 186, 115, 0.2);
 }
 
+/* ==========================================================================
+   Reproductor Mini Zamar (ZamarMiniPlayer)
+   ========================================================================== */
+.zamar-mini-player {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: rgba(223, 186, 115, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 12px;
+  padding: 0.35rem 0.65rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.zamar-mini-player:hover {
+  background: rgba(223, 186, 115, 0.12);
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.zamar-mini-player.is-playing {
+  background: rgba(223, 186, 115, 0.15);
+  border-color: rgba(212, 175, 55, 0.65);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.15);
+}
+
+.zamar-mini-player.banner {
+  flex-grow: 1;
+  max-width: 440px;
+  min-width: 260px;
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.zmp-btn-play {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #fae7be 0%, #dfba73 50%, #b88d38 100%);
+  color: #1a1407;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(184, 141, 56, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.zmp-btn-play:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(184, 141, 56, 0.5);
+}
+
+.zmp-btn-play:active {
+  transform: scale(0.95);
+}
+
+.zmp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(223, 186, 115, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 0.18rem 0.45rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.zmp-tag-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gold-dark);
+  white-space: nowrap;
+}
+
+.zmp-timeline {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-grow: 1;
+  min-width: 120px;
+}
+
+.zmp-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.zmp-slider {
+  flex-grow: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  margin: 0;
+}
+
+.zmp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c5983d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  border: 1.5px solid #fff;
+  transition: transform 0.1s ease;
+}
+
+.zmp-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+.zmp-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c5983d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  border: 1.5px solid #fff;
+  transition: transform 0.1s ease;
+}
+
+.zmp-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.zmp-btn-tool {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.zmp-btn-tool:hover {
+  color: var(--accent);
+  background: rgba(223, 186, 115, 0.18);
+}
+
+.sl-row-player {
+  padding-left: 3rem;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .sl-row-player {
+    padding-left: 0;
+  }
+}
+
 /* Ítems de la Biblioteca en "Añadir Canción" */
 .sl-library-row {
   display: flex;

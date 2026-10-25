@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
 import { ArrowLeft, Mic2, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
@@ -32,6 +32,30 @@ export default async function SetlistDetailPage({
     .orderBy(asc(schema.songs.title))
     .all();
 
+  // Obtener pistas de audio de Zamar vinculadas a canciones
+  const linkedTracks = db
+    .select({
+      id: schema.tracks.id,
+      songId: schema.tracks.songId,
+      title: schema.tracks.title,
+      durationSec: schema.tracks.durationSec,
+    })
+    .from(schema.tracks)
+    .where(isNotNull(schema.tracks.songId))
+    .orderBy(desc(schema.tracks.createdAt))
+    .all();
+
+  const tracksBySongId: Record<number, { id: number; title: string; durationSec: number | null }> = {};
+  for (const t of linkedTracks) {
+    if (t.songId && !tracksBySongId[t.songId]) {
+      tracksBySongId[t.songId] = {
+        id: t.id,
+        title: t.title,
+        durationSec: t.durationSec,
+      };
+    }
+  }
+
   const formattedItems = items.map((it) => ({
     id: it.id,
     songId: it.song.id,
@@ -41,6 +65,7 @@ export default async function SetlistDetailPage({
     keyOverride: it.keyOverride,
     notes: it.itemNotes || "",
     twoColumns: Boolean(it.twoColumns),
+    audioTrack: tracksBySongId[it.song.id] || null,
   }));
 
   return (
@@ -105,6 +130,7 @@ export default async function SetlistDetailPage({
         setlistId={list.id}
         initial={formattedItems}
         library={library}
+        tracksBySongId={tracksBySongId}
       />
     </div>
   );

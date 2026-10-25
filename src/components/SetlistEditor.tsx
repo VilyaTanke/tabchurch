@@ -39,6 +39,13 @@ import {
   updateSetlistItemConfig,
   saveAllSetlistItems,
 } from "@/app/setlists-actions";
+import ZamarMiniPlayer from "@/components/ZamarMiniPlayer";
+
+export type ItemTrack = {
+  id: number;
+  title: string;
+  durationSec: number | null;
+};
 
 export type Item = {
   id: number;
@@ -49,6 +56,7 @@ export type Item = {
   keyOverride: string | null;
   notes?: string | null;
   twoColumns?: boolean;
+  audioTrack?: ItemTrack | null;
 };
 export type LibSong = { id: number; title: string; artist: string | null };
 
@@ -122,6 +130,19 @@ function Row({
           <Trash2 size={16} />
         </button>
       </div>
+
+      {/* Mini reproductor de Zamar si tiene pista MP3 vinculada */}
+      {item.audioTrack && (
+        <div className="sl-row-player">
+          <ZamarMiniPlayer
+            trackId={item.audioTrack.id}
+            trackTitle={item.audioTrack.title}
+            durationSec={item.audioTrack.durationSec}
+            showStudioLink
+            variant="inline"
+          />
+        </div>
+      )}
 
       {/* Barra de configuración táctil y lectura */}
       <div className="sl-row-actions">
@@ -202,10 +223,12 @@ export default function SetlistEditor({
   setlistId,
   initial,
   library,
+  tracksBySongId,
 }: {
   setlistId: number;
   initial: Item[];
   library: LibSong[];
+  tracksBySongId?: Record<number, ItemTrack>;
 }) {
   const [items, setItems] = useState(initial);
   const [q, setQ] = useState("");
@@ -382,7 +405,22 @@ export default function SetlistEditor({
             {available.map((s) => (
               <li key={s.id} className="sl-library-row">
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <strong className="sl-row-title">{s.title}</strong>
+                  <div className="row" style={{ gap: "0.45rem", alignItems: "center" }}>
+                    <strong className="sl-row-title">{s.title}</strong>
+                    {tracksBySongId?.[s.id] && (
+                      <span
+                        className="badge"
+                        style={{
+                          fontSize: "0.7rem",
+                          background: "rgba(223, 186, 115, 0.18)",
+                          color: "var(--accent)",
+                          padding: "0.1rem 0.4rem",
+                        }}
+                      >
+                        MP3
+                      </span>
+                    )}
+                  </div>
                   <div className="sl-row-artist">{s.artist || "Sin artista"}</div>
                 </div>
                 <button
@@ -401,6 +439,7 @@ export default function SetlistEditor({
                             artist: s.artist,
                             originalKey: added.originalKey,
                             keyOverride: null,
+                            audioTrack: tracksBySongId?.[s.id] || null,
                           },
                         ]);
                       }
