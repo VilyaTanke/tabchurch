@@ -27,6 +27,7 @@ import {
   CloudDownload,
   ShieldCheck,
   Circle,
+  Plus,
 } from "lucide-react";
 import { formatDuration, stemColor, stemLabel, type StemFile, type StemModel } from "@/lib/stems";
 import { transposeKey } from "@/lib/chordpro";
@@ -86,6 +87,8 @@ interface StemChannelState {
   muted: boolean;
   solo: boolean;
   pan: number; // -1 (100L) a +1 (100R)
+  isRecordable?: boolean;
+  isArmed?: boolean;
 }
 
 type PracticePreset = "all" | "karaoke" | "drumless" | "bassless" | "guitarless" | "acapella";
@@ -207,7 +210,7 @@ export default function StudioPlayer({
   const anySolo = useMemo(() => channels.some((c) => c.solo), [channels]);
 
   const channelsKey = useMemo(
-    () => channels.map((c) => `${c.name}:${c.url}`).join("|"),
+    () => channels.filter((c) => c.url).map((c) => `${c.name}:${c.url}`).join("|"),
     [channels]
   );
 
@@ -310,9 +313,17 @@ export default function StudioPlayer({
       }
     };
 
+    const audioChannels = channels.filter((ch) => ch.url && ch.url.length > 0);
+    if (audioChannels.length === 0) {
+      Promise.resolve().then(() => {
+        if (active) setIsLoadingAudio(false);
+      });
+      return;
+    }
+
     engine
       .loadChannels(
-        channels.map((ch) => ({
+        audioChannels.map((ch) => ({
           name: ch.name,
           url: ch.url,
           volume: ch.volume,
@@ -343,7 +354,7 @@ export default function StudioPlayer({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ durationSec: roundedDur }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
       })
       .catch((err) => {
@@ -398,7 +409,7 @@ export default function StudioPlayer({
 
   // Screen Wake Lock API y Watchdog de pantalla para Tablets en atril
   useEffect(() => {
-    requestStoragePersistence().catch(() => {});
+    requestStoragePersistence().catch(() => { });
     requestScreenWakeLock().then((acquired) => {
       setWakeLockActive(acquired);
     });
@@ -409,7 +420,7 @@ export default function StudioPlayer({
           setWakeLockActive(acquired);
         });
         if (engineRef.current && isPlaying) {
-          engineRef.current.play().catch(() => {});
+          engineRef.current.play().catch(() => { });
         }
       }
     };
@@ -722,28 +733,42 @@ export default function StudioPlayer({
       const result = await recorderRef.current.stopRecording(latencyCompensationMs);
       setIsRecordingActive(false);
 
-      const nextCount = recordedTakesCount + 1;
-      setRecordedTakesCount(nextCount);
-      const newStemName = `rec_take_${nextCount}`;
-      const newLabel = `Toma ${nextCount} (Grabada)`;
+      // Asignar audio a la pista armada seleccionada, o crear una nueva
+      const armed = channels.find((c) => c.isRecordable && c.isArmed);
+      if (armed) {
+        setChannels((prev) =>
+          prev.map((c) => (c.name === armed.name ? { ...c, url: result.url, isArmed: false } : c))
+        );
+        setWaveforms((prev) => ({
+          ...prev,
+          [armed.name]: { peaks: result.peaks, rmsDb: result.rmsDb },
+        }));
+      } else {
+        const nextCount = recordedTakesCount + 1;
+        setRecordedTakesCount(nextCount);
+        const newStemName = `rec_take_${nextCount}`;
+        const newLabel = `Grabación ${nextCount}`;
 
-      const newChannel: StemChannelState = {
-        name: newStemName,
-        label: newLabel,
-        color: "#ef4444",
-        url: result.url,
-        volume: 1.0,
-        muted: false,
-        solo: false,
-        pan: 0,
-      };
+        const newChannel: StemChannelState = {
+          name: newStemName,
+          label: newLabel,
+          color: "#ef4444",
+          url: result.url,
+          volume: 1.0,
+          muted: false,
+          solo: false,
+          pan: 0,
+          isRecordable: true,
+          isArmed: false,
+        };
 
-      setWaveforms((prev) => ({
-        ...prev,
-        [newStemName]: { peaks: result.peaks, rmsDb: result.rmsDb },
-      }));
+        setWaveforms((prev) => ({
+          ...prev,
+          [newStemName]: { peaks: result.peaks, rmsDb: result.rmsDb },
+        }));
 
-      setChannels((prev) => [...prev, newChannel]);
+        setChannels((prev) => [...prev, newChannel]);
+      }
 
       if (result.durationSec > duration) {
         setDuration(result.durationSec);
@@ -752,6 +777,61 @@ export default function StudioPlayer({
       console.error("Error al finalizar la toma de grabación:", err);
       setIsRecordingActive(false);
     }
+  };
+
+  // Agregar nuevo canal de grabación de audio con Record Arm automático
+  const handleAddRecordingChannel = () => {
+    const nextCount = recordedTakesCount + 1;
+    setRecordedTakesCount(nextCount);
+    const channelName = `rec_channel_${nextCount}`;
+    const newChannel: StemChannelState = {
+      name: channelName,
+      label: `Grabación ${nextCount}`,
+      color: "#ef4444",
+      url: "",
+      volume: 1.0,
+      muted: false,
+      solo: false,
+      pan: 0,
+      isRecordable: true,
+      isArmed: true,
+    };
+
+    setChannels((prev) => [
+      ...prev.map((c) => (c.isRecordable ? { ...c, isArmed: false } : c)),
+      newChannel,
+    ]);
+
+    if (!showRecordDrawer) {
+      handleToggleRecordDrawer();
+    }
+  };
+
+  // Seleccionar / armar canal para grabación mediante el botón circular rojo (Record Arm)
+  const toggleArmChannel = (channelName: string) => {
+    setChannels((prev) =>
+      prev.map((c) => {
+        if (c.name === channelName) {
+          return { ...c, isArmed: !c.isArmed };
+        }
+        return c.isRecordable ? { ...c, isArmed: false } : c;
+      })
+    );
+
+    const target = channels.find((c) => c.name === channelName);
+    if (target && !target.isArmed && !showRecordDrawer) {
+      handleToggleRecordDrawer();
+    }
+  };
+
+  // Eliminar canal de grabación
+  const handleDeleteRecordingChannel = (channelName: string) => {
+    setChannels((prev) => prev.filter((c) => c.name !== channelName));
+    setWaveforms((prev) => {
+      const next = { ...prev };
+      delete next[channelName];
+      return next;
+    });
   };
 
   // Integración nativa con MediaSession API (pantalla bloqueada, auriculares, pedales de escenario Bluetooth)
@@ -948,8 +1028,8 @@ export default function StudioPlayer({
           activePreset !== "all"
             ? `_${activePreset}`
             : semitones !== 0
-            ? `_${displayedTransposedKey}`
-            : "_mezcla";
+              ? `_${displayedTransposedKey}`
+              : "_mezcla";
         a.href = url;
         a.download = `${track.title.replace(/[^\w\s-]/g, "").trim() || "estudio"}${suffix}_24bit.wav`;
         a.click();
@@ -974,10 +1054,10 @@ export default function StudioPlayer({
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   };
@@ -1372,6 +1452,26 @@ export default function StudioPlayer({
                       {ch.label}
                     </span>
                     <div className="strip-actions">
+                      {/* Botón circular rojo (Record Arm) para canales de grabación */}
+                      {ch.isRecordable && (
+                        <button
+                          type="button"
+                          className={`btn-ms btn-rec-arm ${ch.isArmed ? "armed" : ""}`}
+                          onClick={() => toggleArmChannel(ch.name)}
+                          title={
+                            ch.isArmed
+                              ? "Canal armado para grabar. Clic para desarmar."
+                              : "Armar este canal para grabar audio (Record Arm)"
+                          }
+                        >
+                          <Circle
+                            size={10}
+                            fill={ch.isArmed ? "#ffffff" : "#ef4444"}
+                            color={ch.isArmed ? "#ffffff" : "#ef4444"}
+                            className={ch.isArmed && isRecordingActive ? "rec-pulse-dot" : ""}
+                          />
+                        </button>
+                      )}
                       <button
                         className={`btn-ms btn-mute ${ch.muted ? "active" : ""}`}
                         onClick={() => toggleMute(ch.name)}
@@ -1390,14 +1490,26 @@ export default function StudioPlayer({
                       >
                         S
                       </button>
-                      <a
-                        href={`${ch.url}?download=1`}
-                        download={`${track.title} - ${ch.label}`}
-                        className="btn-ms btn-dl-stem"
-                        title={`Descargar stem individual: ${ch.label}`}
-                      >
-                        ⇩
-                      </a>
+                      {ch.url ? (
+                        <a
+                          href={`${ch.url}?download=1`}
+                          download={`${track.title} - ${ch.label}`}
+                          className="btn-ms btn-dl-stem"
+                          title={`Descargar stem individual: ${ch.label}`}
+                        >
+                          ⇩
+                        </a>
+                      ) : null}
+                      {ch.isRecordable && (
+                        <button
+                          type="button"
+                          className="btn-ms btn-del-stem"
+                          onClick={() => handleDeleteRecordingChannel(ch.name)}
+                          title="Eliminar este canal de grabación"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1448,6 +1560,19 @@ export default function StudioPlayer({
                 </div>
               );
             })}
+
+            {/* Botón en la parte inferior del panel de canales para agregar pistas de grabación con botón (+) */}
+            <div className="mixer-add-channel-bar">
+              <button
+                type="button"
+                className="btn-add-rec-channel"
+                onClick={handleAddRecordingChannel}
+                title="Agregar nuevo canal para grabación de audio física"
+              >
+                <Plus size={15} />
+                <span>Agregar canal de grabación</span>
+              </button>
+            </div>
           </div>
 
           {/* Tarjeta para iniciar separación si aún está en pista única */}
@@ -1507,7 +1632,7 @@ export default function StudioPlayer({
               return (
                 <div
                   key={ch.name}
-                  className={`timeline-lane ${effectivelySilenced ? "lane-muted" : ""}`}
+                  className={`timeline-lane ${effectivelySilenced ? "lane-muted" : ""} ${ch.isArmed ? "lane-armed" : ""}`}
                   style={{ "--lane-color": ch.color } as React.CSSProperties}
                 >
                   <div className="lane-label" style={{ color: ch.color }}>
@@ -1516,13 +1641,18 @@ export default function StudioPlayer({
                       style={{ backgroundColor: ch.color }}
                     />
                     <span>{ch.label}</span>
+                    {ch.isArmed && <span className="lane-armed-tag">● REC</span>}
                   </div>
 
                   {/* Badge de telemetría RMS por pista (estilo Mossi) */}
                   <div className="lane-telemetry-badge">
                     {telemetry
                       ? `RMS: ${telemetry.rmsDb} dB · Pan: ${formatPanLabel(ch.pan)}`
-                      : "Decodificando onda..."}
+                      : ch.isRecordable && !ch.url
+                        ? ch.isArmed
+                          ? "● Canal Armado (Presiona Grabar para capturar)"
+                          : "Canal de grabación vacío"
+                        : "Decodificando onda..."}
                   </div>
 
                   <canvas
@@ -1785,8 +1915,8 @@ export default function StudioPlayer({
                 isLoadingAudio
                   ? "Cargando audio..."
                   : isPlaying
-                  ? "Pausar (Espacio)"
-                  : "Reproducir (Espacio)"
+                    ? "Pausar (Espacio)"
+                    : "Reproducir (Espacio)"
               }
             >
               {isLoadingAudio ? (
