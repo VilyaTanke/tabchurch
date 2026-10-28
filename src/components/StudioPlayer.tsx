@@ -26,6 +26,7 @@ import {
   Check,
   CloudDownload,
   ShieldCheck,
+  Circle,
 } from "lucide-react";
 import { formatDuration, stemColor, stemLabel, type StemFile, type StemModel } from "@/lib/stems";
 import { transposeKey } from "@/lib/chordpro";
@@ -34,6 +35,13 @@ import {
   MultiTrackSoundTouchEngine,
   type StemWaveformTelemetry,
 } from "@/lib/audio-engine";
+import {
+  MultiTrackAudioRecorder,
+  getAudioInputDevices,
+  type AudioInputDevice,
+  type InputRoutingMode,
+  type InputMeterTelemetry,
+} from "@/lib/audio-recorder";
 import {
   getHardwareProfile,
   requestScreenWakeLock,
@@ -132,6 +140,21 @@ export default function StudioPlayer({
   const [isSavingOffline, setIsSavingOffline] = useState(false);
   const [isEcoMode, setIsEcoMode] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
+
+  // Grabación multipista y conexión de interface física
+  const [showRecordDrawer, setShowRecordDrawer] = useState(false);
+  const [isRecordingActive, setIsRecordingActive] = useState(false);
+  const [inputDevices, setInputDevices] = useState<AudioInputDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("default");
+  const [routingMode, setRoutingMode] = useState<InputRoutingMode>("mono_ch1");
+  const [customChannelIdx, setCustomChannelIdx] = useState(0);
+  const [maxPhysicalChannels, setMaxPhysicalChannels] = useState(2);
+  const [inputMeter, setInputMeter] = useState<InputMeterTelemetry>({ rms: 0, db: -60, isClipping: false });
+  const [isSoftwareMonitoring, setIsSoftwareMonitoring] = useState(false);
+  const [latencyCompensationMs, setLatencyCompensationMs] = useState(20);
+  const [isMeasuringLatency, setIsMeasuringLatency] = useState(false);
+  const [recordedTakesCount, setRecordedTakesCount] = useState(0);
+  const recorderRef = useRef<MultiTrackAudioRecorder | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -320,7 +343,7 @@ export default function StudioPlayer({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ durationSec: roundedDur }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
       })
       .catch((err) => {
@@ -375,7 +398,7 @@ export default function StudioPlayer({
 
   // Screen Wake Lock API y Watchdog de pantalla para Tablets en atril
   useEffect(() => {
-    requestStoragePersistence().catch(() => {});
+    requestStoragePersistence().catch(() => { });
     requestScreenWakeLock().then((acquired) => {
       setWakeLockActive(acquired);
     });
@@ -386,7 +409,7 @@ export default function StudioPlayer({
           setWakeLockActive(acquired);
         });
         if (engineRef.current && isPlaying) {
-          engineRef.current.play().catch(() => {});
+          engineRef.current.play().catch(() => { });
         }
       }
     };
@@ -412,13 +435,25 @@ export default function StudioPlayer({
     }
   }, [isLooping]);
 
-  // Limpieza al desmontar
+  // Limpieza del motor de audio al desmontar
   useEffect(() => {
     return () => {
       if (engineRef.current) {
         engineRef.current.destroy();
         engineRef.current = null;
       }
+    };
+  }, []);
+
+  // Inicialización y limpieza del grabador multipista
+  useEffect(() => {
+    const recorder = new MultiTrackAudioRecorder((m) => {
+      setInputMeter(m);
+    });
+    recorderRef.current = recorder;
+    return () => {
+      recorder.destroy();
+      recorderRef.current = null;
     };
   }, []);
 
@@ -596,6 +631,126 @@ export default function StudioPlayer({
       console.warn("Error al actualizar almacenamiento offline de stems:", err);
     } finally {
       setIsSavingOffline(false);
+    }
+  };
+
+  // Control de conexión de interface física y grabación multipista
+  const handleToggleRecordDrawer = async () => {
+    if (showRecordDrawer) {
+      if (!isRecordingActive) {
+        if (recorderRef.current) {
+          recorderRef.current.stopInput();
+        }
+        setShowRecordDrawer(false);
+      }
+      return;
+    }
+
+    setShowRecordDrawer(true);
+    const devices = await getAudioInputDevices();
+    setInputDevices(devices);
+    const initialDevId = devices[0]?.deviceId || "default";
+    setSelectedDeviceId(initialDevId);
+
+    if (recorderRef.current) {
+      const detected = await recorderRef.current.initializeInput(initialDevId, 2);
+      setMaxPhysicalChannels(detected);
+      recorderRef.current.setRouting(routingMode, customChannelIdx);
+      recorderRef.current.setMonitoring(isSoftwareMonitoring);
+    }
+  };
+
+  const handleDeviceChange = async (devId: string) => {
+    setSelectedDeviceId(devId);
+    if (recorderRef.current) {
+      const detected = await recorderRef.current.initializeInput(devId, maxPhysicalChannels);
+      setMaxPhysicalChannels(detected);
+      recorderRef.current.setRouting(routingMode, customChannelIdx);
+      recorderRef.current.setMonitoring(isSoftwareMonitoring);
+    }
+  };
+
+  const handleRoutingChange = (mode: InputRoutingMode, idx = 0) => {
+    setRoutingMode(mode);
+    setCustomChannelIdx(idx);
+    if (recorderRef.current) {
+      recorderRef.current.setRouting(mode, idx);
+    }
+  };
+
+  const handleMonitoringToggle = (enabled: boolean) => {
+    setIsSoftwareMonitoring(enabled);
+    if (recorderRef.current) {
+      recorderRef.current.setMonitoring(enabled);
+    }
+  };
+
+  const handleAutoMeasureLatency = async () => {
+    if (!recorderRef.current || isMeasuringLatency) return;
+    setIsMeasuringLatency(true);
+    try {
+      const measuredMs = await recorderRef.current.measureLoopbackLatency();
+      setLatencyCompensationMs(measuredMs);
+    } catch (err) {
+      console.warn("Fallo en medición de latencia:", err);
+    } finally {
+      setIsMeasuringLatency(false);
+    }
+  };
+
+  const handleStartRecording = async () => {
+    if (!recorderRef.current || isRecordingActive) return;
+
+    recorderRef.current.startRecording();
+    setIsRecordingActive(true);
+
+    if (engineRef.current) {
+      await engineRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const handleStopRecording = async () => {
+    if (!recorderRef.current || !isRecordingActive) return;
+
+    if (engineRef.current) {
+      engineRef.current.pause();
+      setIsPlaying(false);
+    }
+
+    try {
+      const result = await recorderRef.current.stopRecording(latencyCompensationMs);
+      setIsRecordingActive(false);
+
+      const nextCount = recordedTakesCount + 1;
+      setRecordedTakesCount(nextCount);
+      const newStemName = `rec_take_${nextCount}`;
+      const newLabel = `Toma ${nextCount} (Grabada)`;
+
+      const newChannel: StemChannelState = {
+        name: newStemName,
+        label: newLabel,
+        color: "#ef4444",
+        url: result.url,
+        volume: 1.0,
+        muted: false,
+        solo: false,
+        pan: 0,
+      };
+
+      setWaveforms((prev) => ({
+        ...prev,
+        [newStemName]: { peaks: result.peaks, rmsDb: result.rmsDb },
+      }));
+
+      setChannels((prev) => [...prev, newChannel]);
+
+      if (result.durationSec > duration) {
+        setDuration(result.durationSec);
+      }
+    } catch (err) {
+      console.error("Error al finalizar la toma de grabación:", err);
+      setIsRecordingActive(false);
     }
   };
 
@@ -793,8 +948,8 @@ export default function StudioPlayer({
           activePreset !== "all"
             ? `_${activePreset}`
             : semitones !== 0
-            ? `_${displayedTransposedKey}`
-            : "_mezcla";
+              ? `_${displayedTransposedKey}`
+              : "_mezcla";
         a.href = url;
         a.download = `${track.title.replace(/[^\w\s-]/g, "").trim() || "estudio"}${suffix}_24bit.wav`;
         a.click();
@@ -819,10 +974,10 @@ export default function StudioPlayer({
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   };
@@ -940,7 +1095,7 @@ export default function StudioPlayer({
           </div>
         </div>
 
-        {/* Derecha: Exportar Mezcla .WAV, Acordes, IA y Pantalla Completa */}
+        {/* Derecha: Exportar Mezcla .WAV, Acordes, IA, Grabar y Pantalla Completa */}
         <div className="studio-header-right">
           {track.song && (
             <button
@@ -952,6 +1107,21 @@ export default function StudioPlayer({
               <span className="btn-text">Cifrado</span>
             </button>
           )}
+
+          {/* Botón de armado y apertura del panel de grabación multipista */}
+          <button
+            className={`studio-header-btn record-header-btn ${isRecordingActive ? "recording-active" : ""}`}
+            onClick={handleToggleRecordDrawer}
+            title="Conectar interface de audio y grabar toma en multipista"
+          >
+            <Circle
+              size={12}
+              fill={isRecordingActive ? "#ef4444" : "currentColor"}
+              color={isRecordingActive ? "#ef4444" : "currentColor"}
+              className={isRecordingActive ? "rec-pulse-dot" : ""}
+            />
+            <span className="btn-text">{isRecordingActive ? "Grabando..." : "Grabar"}</span>
+          </button>
 
           {canManage && !hasStems && (
             <div className="studio-ai-group">
@@ -1394,6 +1564,183 @@ export default function StudioPlayer({
             </div>
           </aside>
         )}
+
+        {/* DRAWER LATERAL: CONEXIÓN DE INTERFACE FÍSICA Y GRABACIÓN MULTIPISTA */}
+        {showRecordDrawer && (
+          <aside className="studio-record-drawer">
+            <div className="drawer-header">
+              <div className="record-drawer-title">
+                <Circle
+                  size={14}
+                  fill="#ef4444"
+                  color="#ef4444"
+                  className={isRecordingActive ? "rec-pulse-dot" : ""}
+                />
+                <h3>Grabación Multipista</h3>
+              </div>
+              <button
+                className="btn-close"
+                onClick={handleToggleRecordDrawer}
+                disabled={isRecordingActive}
+                title="Cerrar panel de grabación"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="drawer-body record-drawer-body">
+              {/* 1. Selector de Interfaz de Audio Física */}
+              <div className="record-field-group">
+                <label className="record-field-label">Interface / Entrada de Audio:</label>
+                <select
+                  className="record-select"
+                  value={selectedDeviceId}
+                  onChange={(e) => handleDeviceChange(e.target.value)}
+                  disabled={isRecordingActive}
+                >
+                  {inputDevices.length === 0 ? (
+                    <option value="default">Micrófono por defecto del sistema</option>
+                  ) : (
+                    inputDevices.map((dev) => (
+                      <option key={dev.deviceId} value={dev.deviceId}>
+                        {dev.label}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* 2. Enrutamiento de Canales Físicos */}
+              <div className="record-field-group">
+                <label className="record-field-label">Canal Físico a Grabar:</label>
+                <div className="record-routing-pills">
+                  <button
+                    type="button"
+                    className={`routing-pill ${routingMode === "mono_ch1" ? "active" : ""}`}
+                    onClick={() => handleRoutingChange("mono_ch1")}
+                    disabled={isRecordingActive}
+                  >
+                    Canal 1 (Mono)
+                  </button>
+                  <button
+                    type="button"
+                    className={`routing-pill ${routingMode === "mono_ch2" ? "active" : ""}`}
+                    onClick={() => handleRoutingChange("mono_ch2")}
+                    disabled={isRecordingActive || maxPhysicalChannels < 2}
+                  >
+                    Canal 2 (Mono)
+                  </button>
+                  <button
+                    type="button"
+                    className={`routing-pill ${routingMode === "stereo_1_2" ? "active" : ""}`}
+                    onClick={() => handleRoutingChange("stereo_1_2")}
+                    disabled={isRecordingActive || maxPhysicalChannels < 2}
+                  >
+                    1-2 (Estéreo)
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Vúmetro de Entrada en Vivo con Detección de Clipping */}
+              <div className="record-meter-card">
+                <div className="meter-card-header">
+                  <span>Nivel Pre-Fader</span>
+                  <span className={`meter-db-badge ${inputMeter.isClipping ? "clip-alert" : ""}`}>
+                    {inputMeter.isClipping ? "¡CLIP!" : `${inputMeter.db} dBFS`}
+                  </span>
+                </div>
+                <div className="input-vu-track">
+                  <div
+                    className={`input-vu-fill ${inputMeter.isClipping ? "fill-clip" : ""}`}
+                    style={{ width: `${Math.min(100, Math.sqrt(inputMeter.rms) * 140)}%` }}
+                  />
+                </div>
+                <p className="meter-hint">
+                  {inputMeter.isClipping
+                    ? "⚠️ Señal saturando a 0 dBFS. Baja la ganancia en tu interface."
+                    : "Ajusta la perilla Gain de tu tarjeta hasta que el pico ronde -12 dB a -6 dB."}
+                </p>
+              </div>
+
+              {/* 4. Monitoreo por Auriculares (Directo vs Software) */}
+              <div className="record-field-group toggle-group">
+                <label className="record-field-label">Monitoreo Auriculares:</label>
+                <div className="toggle-switch-wrapper">
+                  <button
+                    type="button"
+                    className={`toggle-option ${!isSoftwareMonitoring ? "active" : ""}`}
+                    onClick={() => handleMonitoringToggle(false)}
+                  >
+                    Directo (0.0 ms)
+                  </button>
+                  <button
+                    type="button"
+                    className={`toggle-option ${isSoftwareMonitoring ? "active" : ""}`}
+                    onClick={() => handleMonitoringToggle(true)}
+                  >
+                    Software
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. Compensación de Latencia (ADC) */}
+              <div className="record-field-group">
+                <div className="latency-header-row">
+                  <label className="record-field-label">Compensación Retardo (ADC):</label>
+                  <span className="latency-ms-badge">{latencyCompensationMs} ms</span>
+                </div>
+                <div className="latency-slider-row">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={latencyCompensationMs}
+                    onChange={(e) => setLatencyCompensationMs(Number(e.target.value))}
+                    disabled={isRecordingActive}
+                    className="strip-slider"
+                  />
+                  <button
+                    type="button"
+                    className="btn-measure-latency"
+                    onClick={handleAutoMeasureLatency}
+                    disabled={isRecordingActive || isMeasuringLatency}
+                    title="Emitir pulso para medir retardo de hardware automáticamente"
+                  >
+                    {isMeasuringLatency ? "Midiendo..." : "Calibrar"}
+                  </button>
+                </div>
+                <p className="field-hint">
+                  Alinea la toma grabada con los stems eliminando el retardo del buffer.
+                </p>
+              </div>
+
+              {/* 6. Botón de Acción Principal (Grabar / Parar) */}
+              <div className="record-action-box">
+                {!isRecordingActive ? (
+                  <button
+                    type="button"
+                    className="btn-record-main start"
+                    onClick={handleStartRecording}
+                    disabled={isLoadingAudio}
+                  >
+                    <Circle size={18} fill="#ffffff" color="#ffffff" />
+                    <span>Empezar a Grabar Toma</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-record-main stop"
+                    onClick={handleStopRecording}
+                  >
+                    <div className="rec-stop-square" />
+                    <span>Detener y Guardar en Timeline</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
 
       {/* ---------- BARRA DE TRANSPORTE INFERIOR (FOOTER DAW) ---------- */}
@@ -1438,8 +1785,8 @@ export default function StudioPlayer({
                 isLoadingAudio
                   ? "Cargando audio..."
                   : isPlaying
-                  ? "Pausar (Espacio)"
-                  : "Reproducir (Espacio)"
+                    ? "Pausar (Espacio)"
+                    : "Reproducir (Espacio)"
               }
             >
               {isLoadingAudio ? (
