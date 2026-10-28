@@ -12,7 +12,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
-import { createChurch, updateChurch, deleteChurch, type FormState } from "@/app/actions";
+import { createChurch, updateChurch, deleteChurch } from "@/app/actions";
 import type { AdminChurch } from "@/components/UserRow";
 
 export type ChurchWithCount = AdminChurch & {

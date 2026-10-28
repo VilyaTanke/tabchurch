@@ -110,7 +110,7 @@ export default function SongEditor({ song }: { song?: Song }) {
       } else {
         setImportError(res.error || "No se pudo extraer la canción");
       }
-    } catch (e: any) {
+    } catch {
       setImportError("Error de conexión al importar");
     } finally {
       setImporting(false);

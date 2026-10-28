@@ -49,7 +49,7 @@ export const songs = sqliteTable("songs", {
 export const groups = sqliteTable("groups", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdBy: integer("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
 });
 
 export const groupMembers = sqliteTable(

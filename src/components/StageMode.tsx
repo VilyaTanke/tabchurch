@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import {
-  isChord,
   keyPrefersFlats,
-  parseChordPro,
   semitonesBetween,
   transposeContent,
   transposeKey,
@@ -40,12 +38,13 @@ type StageSong = {
 
 export default function StageMode({
   songs,
-  setlistName,
   setlistId,
+  canEdit = true,
 }: {
   songs: StageSong[];
-  setlistName: string;
+  setlistName?: string;
   setlistId: number;
+  canEdit?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   const [size, setSize] = useState(22);
@@ -53,41 +52,43 @@ export default function StageMode({
   const [hideTabs, setHideTabs] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(0); // 0 = off, 1 = lento, 2 = normal, 3 = rapido
   const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [overrides, setOverrides] = useState<
+    Record<number, { keyOverride?: string | null; twoColumns?: boolean }>
+  >({});
   const [twoColumns, setTwoColumns] = useState(() => Boolean(songs[0]?.twoColumns));
   const [isSaving, startSave] = useTransition();
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [stepOffset, setStepOffset] = useState(0);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const selectSongIndex = useCallback(
+    (nextIndex: number) => {
+      const clamped = Math.max(0, Math.min(songs.length - 1, nextIndex));
+      setIndex(clamped);
+      setStepOffset(0);
+      setSavedSuccess(false);
+      const targetSong = songs[clamped];
+      const ov = targetSong ? overrides[targetSong.id] : undefined;
+      setTwoColumns(ov?.twoColumns !== undefined ? ov.twoColumns : Boolean(targetSong?.twoColumns));
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
+      }
+    },
+    [songs, overrides]
+  );
 
   const song = songs[index];
+  const currentOverride = song ? overrides[song.id] : undefined;
+  const effectiveKeyOverride =
+    currentOverride?.keyOverride !== undefined ? currentOverride.keyOverride : song?.keyOverride;
 
   // Cálculo de tono inicial basado en keyOverride, currentKey o originalKey
-  const initialTargetKey = song?.keyOverride || song?.currentKey || song?.originalKey || null;
+  const initialTargetKey = effectiveKeyOverride || song?.currentKey || song?.originalKey || null;
   const initialSteps = useMemo(() => {
     if (!song?.originalKey || !initialTargetKey) return 0;
     return semitonesBetween(song.originalKey, initialTargetKey);
   }, [song, initialTargetKey]);
-
-  const [stepOffset, setStepOffset] = useState(0);
-
-  // Reiniciar offset y cargar dos columnas al cambiar de canción
-  useEffect(() => {
-    setStepOffset(0);
-    setSavedSuccess(false);
-    setTwoColumns(Boolean(songs[index]?.twoColumns));
-  }, [index, songs]);
-
-  const handleSaveToSetlist = () => {
-    if (!song?.itemId) return;
-    startSave(async () => {
-      await updateSetlistItemConfig(setlistId, song.itemId!, {
-        keyOverride: currentKey || undefined,
-        twoColumns: twoColumns ? 1 : 0,
-      });
-      song.keyOverride = currentKey;
-      song.twoColumns = twoColumns;
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 2500);
-    });
-  };
 
   const totalSteps = initialSteps + stepOffset;
   const flat = keyPrefersFlats(transposeKey(song?.originalKey, totalSteps) ?? undefined);
@@ -97,13 +98,30 @@ export default function StageMode({
     return transposeContent(song.contentChordpro, totalSteps, flat);
   }, [song, totalSteps, flat]);
 
+  const handleSaveToSetlist = () => {
+    if (!canEdit || !song?.itemId) return;
+    startSave(async () => {
+      await updateSetlistItemConfig(setlistId, song.itemId!, {
+        keyOverride: currentKey || undefined,
+        twoColumns: twoColumns ? 1 : 0,
+      });
+      setOverrides((prev) => ({
+        ...prev,
+        [song.id]: { keyOverride: currentKey, twoColumns },
+      }));
+      setStepOffset(0);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    });
+  };
+
   // Pantalla siempre encendida (Wake Lock API)
   useEffect(() => {
-    let wakeLock: any = null;
+    let wakeLock: WakeLockSentinel | null = null;
     const requestWakeLock = async () => {
       try {
-        if ("wakeLock" in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request("screen");
+        if ("wakeLock" in navigator && navigator.wakeLock) {
+          wakeLock = await navigator.wakeLock.request("screen");
           setWakeLockActive(true);
           wakeLock.addEventListener("release", () => {
             setWakeLockActive(false);
@@ -120,7 +138,6 @@ export default function StageMode({
   }, []);
 
   // Autoscroll suave
-  const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (autoScrollSpeed === 0) return;
     let animId: number;
@@ -145,9 +162,9 @@ export default function StageMode({
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === "PageDown") {
-        setIndex((i) => Math.min(songs.length - 1, i + 1));
+        selectSongIndex(index + 1);
       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
-        setIndex((i) => Math.max(0, i - 1));
+        selectSongIndex(index - 1);
       } else if (e.key === " ") {
         // Espacio alterna autoscroll
         e.preventDefault();
@@ -156,7 +173,7 @@ export default function StageMode({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [songs.length]);
+  }, [index, selectSongIndex]);
 
   if (!song) {
     return (
@@ -261,11 +278,12 @@ export default function StageMode({
           <button
             className={`stage-btn small ${twoColumns ? "active" : ""}`}
             onClick={() => {
-              setTwoColumns((c) => {
-                const next = !c;
-                if (song) song.twoColumns = next;
-                return next;
-              });
+              const next = !twoColumns;
+              setTwoColumns(next);
+              setOverrides((prev) => ({
+                ...prev,
+                [song.id]: { ...prev[song.id], twoColumns: next },
+              }));
             }}
             title={twoColumns ? "Visualización en 2 columnas activada (click para 1 col)" : "Visualización en 1 columna (click para 2 cols)"}
             style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
@@ -274,7 +292,7 @@ export default function StageMode({
             <span>{twoColumns ? "2 Cols" : "1 Col"}</span>
           </button>
 
-          {song.itemId && (
+          {canEdit && song.itemId && (
             <button
               className={`stage-btn small ${savedSuccess ? "active" : ""}`}
               onClick={handleSaveToSetlist}
@@ -330,10 +348,7 @@ export default function StageMode({
         <button
           className="stage-nav-btn"
           disabled={index === 0}
-          onClick={() => {
-            setIndex((i) => Math.max(0, i - 1));
-            if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          }}
+          onClick={() => selectSongIndex(index - 1)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
         >
           <ChevronLeft size={16} />
@@ -344,26 +359,24 @@ export default function StageMode({
           <select
             className="stage-select"
             value={index}
-            onChange={(e) => {
-              setIndex(Number(e.target.value));
-              if (scrollRef.current) scrollRef.current.scrollTop = 0;
-            }}
+            onChange={(e) => selectSongIndex(Number(e.target.value))}
           >
-            {songs.map((s, idx) => (
-              <option key={s.id} value={idx}>
-                {idx + 1}. {s.title} ({s.keyOverride || s.originalKey || "—"})
-              </option>
-            ))}
+            {songs.map((s, idx) => {
+              const ov = overrides[s.id];
+              const dispKey = (ov?.keyOverride !== undefined ? ov.keyOverride : s.keyOverride) || s.originalKey || "—";
+              return (
+                <option key={s.id} value={idx}>
+                  {idx + 1}. {s.title} ({dispKey})
+                </option>
+              );
+            })}
           </select>
         </div>
 
         <button
           className="stage-nav-btn"
           disabled={index === songs.length - 1}
-          onClick={() => {
-            setIndex((i) => Math.min(songs.length - 1, i + 1));
-            if (scrollRef.current) scrollRef.current.scrollTop = 0;
-          }}
+          onClick={() => selectSongIndex(index + 1)}
           style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}
         >
           <span>Siguiente</span>

@@ -2,14 +2,12 @@
 
 import { useActionState, useEffect, useState } from "react";
 import {
-  ShieldCheck,
   KeyRound,
   UserCheck,
   UserX,
   Pencil,
   Check,
   X,
-  User,
   Church,
 } from "lucide-react";
 import { resetPassword, toggleUserActive, updateUser } from "@/app/actions";

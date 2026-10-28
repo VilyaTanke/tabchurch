@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { desc, like, or, sql } from "drizzle-orm";
 import {
-  Plus,
   Clock,
   User,
   Search,
@@ -17,6 +16,23 @@ import SongLibraryManager from "@/components/SongLibraryManager";
 export const metadata = { title: "Canciones · Tab-NuevaVida" };
 
 const PAGE_SIZE = 20;
+
+function getPaginationWindow(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "ellipsis")[] = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+
+  if (left > 2) pages.push("ellipsis");
+  for (let p = left; p <= right; p++) {
+    pages.push(p);
+  }
+  if (right < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
 
 export default async function SongsPage({
   searchParams,
@@ -56,6 +72,8 @@ export default async function SongsPage({
     const qs = params.toString();
     return qs ? `/canciones?${qs}` : "/canciones";
   };
+
+  const pageItems = getPaginationWindow(currentPage, totalPages);
 
   return (
     <div className="stack">
@@ -122,9 +140,9 @@ export default async function SongsPage({
         </form>
       </SongLibraryManager>
 
-      {/* Controles de paginación */}
+      {/* Controles de paginación con ventana y puntos suspensivos */}
       {totalPages > 1 && (
-        <div className="row" style={{ justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
+        <div className="row" style={{ justifyContent: "center", gap: "0.5rem", marginTop: "1rem", flexWrap: "wrap" }}>
           {currentPage > 1 ? (
             <Link
               href={buildPageUrl(currentPage - 1)}
@@ -145,17 +163,28 @@ export default async function SongsPage({
             </button>
           )}
 
-          <div className="row" style={{ gap: "0.35rem" }}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-              const isCurrent = p === currentPage;
+          <div className="row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
+            {pageItems.map((item, idx) => {
+              if (item === "ellipsis") {
+                return (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="muted"
+                    style={{ padding: "0 0.35rem", userSelect: "none" }}
+                  >
+                    …
+                  </span>
+                );
+              }
+              const isCurrent = item === currentPage;
               return (
                 <Link
-                  key={p}
-                  href={buildPageUrl(p)}
+                  key={item}
+                  href={buildPageUrl(item)}
                   className={`btn small ${isCurrent ? "" : "ghost"}`}
                   style={{ minWidth: "38px", padding: "0 0.6rem", textAlign: "center" }}
                 >
-                  {p}
+                  {item}
                 </Link>
               );
             })}

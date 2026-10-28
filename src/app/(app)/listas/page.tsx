@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { desc, eq, or, sql } from "drizzle-orm";
-import { Users, ListPlus } from "lucide-react";
+import { Users } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
 import { createSetlist } from "@/app/setlists-actions";

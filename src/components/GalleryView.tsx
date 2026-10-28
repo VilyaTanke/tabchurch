@@ -12,7 +12,6 @@ import {
   ListMusic,
   LayoutGrid,
   Play,
-  Pause,
   Download,
   Trash2,
   Sliders,
@@ -21,7 +20,7 @@ import {
 import TrackCard, { type GalleryTrackItem } from "@/components/TrackCard";
 import AudioUploadModal from "@/components/AudioUploadModal";
 import UnifiedAudioPlayer from "@/components/UnifiedAudioPlayer";
-import { formatBytes, formatDuration, parseStemsList } from "@/lib/stems";
+import { formatDuration, parseStemsList } from "@/lib/stems";
 import { transposeKey } from "@/lib/chordpro";
 import {
   getSharedAudioContext,
@@ -65,6 +64,7 @@ export default function GalleryView({
 
   // Instancia única del canal de reproducción con SoundTouch
   const playerChannelRef = useRef<SoundTouchChannel | null>(null);
+  const onEndedCallbackRef = useRef<() => void>(() => {});
 
   // Lista filtrada según búsqueda y stems
   const filtered = tracks.filter((t) => {
@@ -161,13 +161,26 @@ export default function GalleryView({
         const buffer = await loadAudioBuffer(`/api/tracks/${trackToPlay.id}`, ctx);
         setDuration(buffer.duration);
 
+        // Si la pista no tenía duración registrada en BD, persistirla silenciosamente
+        if (!trackToPlay.durationSec && buffer.duration > 0) {
+          const roundedDur = Math.round(buffer.duration * 10) / 10;
+          setTracks((prev) =>
+            prev.map((t) => (t.id === trackToPlay.id ? { ...t, durationSec: roundedDur } : t))
+          );
+          fetch(`/api/tracks/${trackToPlay.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ durationSec: roundedDur }),
+          }).catch(() => {});
+        }
+
         const ch = new SoundTouchChannel(ctx, buffer, ctx.destination);
         ch.setSemitones(0);
         ch.setVolume(volume);
         ch.setMuted(isMuted);
 
         ch.onEnded = () => {
-          handleTrackEnded();
+          onEndedCallbackRef.current();
         };
 
         playerChannelRef.current = ch;
@@ -194,27 +207,28 @@ export default function GalleryView({
     [volume, isMuted]
   );
 
-  // Manejador al finalizar la reproducción de la canción actual
-  const handleTrackEnded = () => {
-    if (repeatMode === "one") {
-      if (playerChannelRef.current) {
-        playerChannelRef.current.seek(0);
-        playerChannelRef.current.isPlaying = true;
-        setIsPlaying(true);
+  // Mantener la referencia del callback de finalización siempre sincronizada con el estado más reciente
+  useEffect(() => {
+    onEndedCallbackRef.current = () => {
+      if (repeatMode === "one") {
+        if (playerChannelRef.current) {
+          playerChannelRef.current.seek(0);
+          playerChannelRef.current.isPlaying = true;
+          setIsPlaying(true);
+        }
+        return;
       }
-      return;
-    }
 
-    // Auto-avance a la siguiente canción en la lista
-    if (activeIndex >= 0 && activeIndex < filtered.length - 1) {
-      playTrack(filtered[activeIndex + 1], true);
-    } else if (repeatMode === "all" && filtered.length > 0) {
-      playTrack(filtered[0], true);
-    } else {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    }
-  };
+      if (activeIndex >= 0 && activeIndex < filtered.length - 1) {
+        playTrack(filtered[activeIndex + 1], true);
+      } else if (repeatMode === "all" && filtered.length > 0) {
+        playTrack(filtered[0], true);
+      } else {
+        setIsPlaying(false);
+        setCurrentTime(0);
+      }
+    };
+  }, [repeatMode, activeIndex, filtered, playTrack]);
 
   // Alternar play/pause en la pista activa o cargar una nueva
   const handleTogglePlay = (trackId?: number) => {
@@ -328,6 +342,10 @@ export default function GalleryView({
         ...activeTrack,
         musicalKey: newKey || activeTrack.musicalKey,
         sizeBytes: mp3Blob.size,
+        stemsStatus: "none",
+        stemsProgress: 0,
+        stemsList: null,
+        stemsError: null,
       };
 
       // Limpiar caché en memoria para que las próximas reproducciones/descargas tomen el nuevo archivo
@@ -352,7 +370,7 @@ export default function GalleryView({
         ch.setVolume(volume);
         ch.setMuted(isMuted);
         ch.seek(currentPos);
-        ch.onEnded = () => handleTrackEnded();
+        ch.onEnded = () => onEndedCallbackRef.current();
         ch.isPlaying = wasPlaying;
         playerChannelRef.current = ch;
       }

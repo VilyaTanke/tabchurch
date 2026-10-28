@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useId } from "react";
 import Link from "next/link";
 import {
   Play,
@@ -36,7 +36,6 @@ export interface ZamarMiniPlayerProps {
 export default function ZamarMiniPlayer({
   trackId,
   trackTitle,
-  artist,
   durationSec,
   baseKey,
   currentKey,
@@ -45,32 +44,41 @@ export default function ZamarMiniPlayer({
   className = "",
   onKeyChange,
 }: ZamarMiniPlayerProps) {
+  const reactId = useId();
+  const playerId = `zamar-mini-${trackId}-${reactId}`;
+
   const channelRef = useRef<SoundTouchChannel | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState<number>(durationSec || 0);
+  const [decodedDuration, setDecodedDuration] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSeeking, setIsSeeking] = useState(false);
 
-  // Calcular semitonos iniciales basados en baseKey y currentKey
-  const [semitones, setSemitones] = useState<number>(() => {
-    if (baseKey && currentKey) {
-      return semitonesBetween(baseKey, currentKey);
-    }
-    return 0;
-  });
+  const propSemitones = baseKey && currentKey ? semitonesBetween(baseKey, currentKey) : 0;
+  const [semitones, setSemitones] = useState<number>(propSemitones);
+  const [prevKeyPair, setPrevKeyPair] = useState(`${baseKey ?? ""}:${currentKey ?? ""}`);
 
-  // Identificador único para coordinar un único reproductor activo
-  const playerIdRef = useRef(
-    `zamar-mini-${trackId}-${Math.random().toString(36).slice(2, 8)}`
-  );
+  const currentKeyPair = `${baseKey ?? ""}:${currentKey ?? ""}`;
+  if (currentKeyPair !== prevKeyPair) {
+    setPrevKeyPair(currentKeyPair);
+    setSemitones(propSemitones);
+  }
+
+  const duration = decodedDuration > 0 ? decodedDuration : durationSec || 0;
+
+  // Sincronizar semitonos en el canal de audio cuando cambian
+  useEffect(() => {
+    if (channelRef.current) {
+      channelRef.current.setSemitones(semitones);
+    }
+  }, [semitones]);
 
   // Escuchar evento global para pausar si otro reproductor comienza a sonar
   useEffect(() => {
     const handleGlobalPlay = (e: Event) => {
       const customEvent = e as CustomEvent<{ playerId: string; trackId: number }>;
-      if (customEvent.detail?.playerId !== playerIdRef.current) {
+      if (customEvent.detail?.playerId !== playerId) {
         if (channelRef.current && channelRef.current.isPlaying) {
           channelRef.current.isPlaying = false;
           setIsPlaying(false);
@@ -82,7 +90,7 @@ export default function ZamarMiniPlayer({
     return () => {
       window.removeEventListener("zamar-audio-play", handleGlobalPlay);
     };
-  }, []);
+  }, [playerId]);
 
   // Escuchar sincronización de tono externa (por ejemplo, desde SongViewer)
   useEffect(() => {
@@ -98,24 +106,6 @@ export default function ZamarMiniPlayer({
     window.addEventListener("zamar-key-sync", handleKeySync);
     return () => window.removeEventListener("zamar-key-sync", handleKeySync);
   }, []);
-
-  // Actualizar semitonos si cambia currentKey o baseKey desde props (ej. selector TONO)
-  useEffect(() => {
-    if (baseKey && currentKey) {
-      const diff = semitonesBetween(baseKey, currentKey);
-      setSemitones(diff);
-      if (channelRef.current) {
-        channelRef.current.setSemitones(diff);
-      }
-    }
-  }, [baseKey, currentKey]);
-
-  // Actualizar duración si cambia durationSec
-  useEffect(() => {
-    if (durationSec && durationSec > 0 && duration === 0) {
-      setDuration(durationSec);
-    }
-  }, [durationSec, duration]);
 
   // Loop suave de animación para el avance de la barra de tiempo
   useEffect(() => {
@@ -155,7 +145,7 @@ export default function ZamarMiniPlayer({
           await ensureAudioContextResumed(ctx);
           window.dispatchEvent(
             new CustomEvent("zamar-audio-play", {
-              detail: { playerId: playerIdRef.current, trackId },
+              detail: { playerId, trackId },
             })
           );
           channelRef.current.isPlaying = true;
@@ -171,12 +161,20 @@ export default function ZamarMiniPlayer({
 
       window.dispatchEvent(
         new CustomEvent("zamar-audio-play", {
-          detail: { playerId: playerIdRef.current, trackId },
+          detail: { playerId, trackId },
         })
       );
 
       const buffer = await loadAudioBuffer(`/api/tracks/${trackId}`, ctx);
-      setDuration(buffer.duration);
+      setDecodedDuration(buffer.duration);
+
+      if (!durationSec && buffer.duration > 0) {
+        fetch(`/api/tracks/${trackId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ durationSec: Math.round(buffer.duration * 10) / 10 }),
+        }).catch(() => {});
+      }
 
       const ch = new SoundTouchChannel(ctx, buffer, ctx.destination);
       ch.setSemitones(semitones);
@@ -197,7 +195,7 @@ export default function ZamarMiniPlayer({
     } finally {
       setIsLoading(false);
     }
-  }, [isPlaying, trackId, semitones, isMuted, currentTime]);
+  }, [isPlaying, playerId, trackId, durationSec, semitones, isMuted, currentTime]);
 
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = Number(e.target.value);

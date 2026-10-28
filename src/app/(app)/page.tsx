@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, desc, eq, or, sql } from "drizzle-orm";
+import { desc, eq, or, sql } from "drizzle-orm";
 import {
   Plus,
   ListPlus,

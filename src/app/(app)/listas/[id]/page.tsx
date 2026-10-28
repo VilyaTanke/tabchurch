@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { asc, desc, isNotNull } from "drizzle-orm";
 import { ArrowLeft, Mic2, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
-import { deleteSetlist, updateSetlist } from "@/app/setlists-actions";
+import { deleteSetlist } from "@/app/setlists-actions";
 import SetlistEditor from "@/components/SetlistEditor";
 import PrintButton from "@/components/PrintButton";
 import ReadingScaleControl from "@/components/ReadingScaleControl";
-import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
+import { canUserEditSetlist, getSetlistFor, getSetlistItems } from "@/lib/setlists";
 
 export default async function SetlistDetailPage({
   params,
@@ -18,9 +18,10 @@ export default async function SetlistDetailPage({
   const user = await requireUser();
   const { id } = await params;
   const setlistId = Number(id);
-  const list = getSetlistFor(user.id, setlistId);
+  const list = getSetlistFor(user.id, setlistId, user.role === "admin");
   if (!list) notFound();
 
+  const canEdit = canUserEditSetlist(user, list);
   const items = getSetlistItems(setlistId);
   const library = db
     .select({
@@ -113,16 +114,18 @@ export default async function SetlistDetailPage({
             </>
           )}
           <ReadingScaleControl />
-          <form action={deleteSetlist}>
-            <input type="hidden" name="id" value={list.id} />
-            <button
-              className="btn danger small"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-            >
-              <Trash2 size={13} />
-              <span>Eliminar</span>
-            </button>
-          </form>
+          {canEdit && (
+            <form action={deleteSetlist}>
+              <input type="hidden" name="id" value={list.id} />
+              <button
+                className="btn danger small"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <Trash2 size={13} />
+                <span>Eliminar</span>
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
@@ -131,6 +134,7 @@ export default async function SetlistDetailPage({
         initial={formattedItems}
         library={library}
         tracksBySongId={tracksBySongId}
+        canEdit={canEdit}
       />
     </div>
   );

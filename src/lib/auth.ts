@@ -2,15 +2,19 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, lte } from "drizzle-orm";
 import { db, schema } from "@/db";
 
 const COOKIE = "tc_session";
 const DAYS = 30;
 
 export async function createSession(userId: number) {
+  const now = Math.floor(Date.now() / 1000);
+  // Purgar sesiones expiradas para mantener limpia la base de datos
+  db.delete(schema.sessions).where(lte(schema.sessions.expiresAt, now)).run();
+
   const id = randomBytes(32).toString("hex");
-  const expiresAt = Math.floor(Date.now() / 1000) + DAYS * 86400;
+  const expiresAt = now + DAYS * 86400;
   db.insert(schema.sessions).values({ id, userId, expiresAt }).run();
   (await cookies()).set(COOKIE, id, {
     httpOnly: true,

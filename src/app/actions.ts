@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { and, eq, ne } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { createSession, destroySession, requireAdmin, requireUser } from "@/lib/auth";
@@ -9,13 +10,69 @@ import { revalidatePath } from "next/cache";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
+// Control en memoria de intentos fallidos de inicio de sesión (protección contra fuerza bruta)
+const LOGIN_WINDOW_MS = 10 * 60 * 1000; // 10 minutos
+const MAX_LOGIN_ATTEMPTS = 6;
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string): { allowed: boolean; waitSec?: number } {
+  const now = Date.now();
+  // Limpieza oportunista de entradas caducadas
+  if (loginAttempts.size > 500) {
+    for (const [k, v] of loginAttempts.entries()) {
+      if (v.resetAt <= now) loginAttempts.delete(k);
+    }
+  }
+  const entry = loginAttempts.get(key);
+  if (!entry || entry.resetAt <= now) {
+    return { allowed: true };
+  }
+  if (entry.count >= MAX_LOGIN_ATTEMPTS) {
+    return { allowed: false, waitSec: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  return { allowed: true };
+}
+
+function recordFailedAttempt(key: string) {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || entry.resetAt <= now) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function clearFailedAttempts(key: string) {
+  loginAttempts.delete(key);
+}
+
 export async function login(_: FormState, form: FormData): Promise<FormState> {
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
+
+  const hdrs = await headers();
+  const ip =
+    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    hdrs.get("x-real-ip") ||
+    "local";
+  const rateKey = `${ip}:${username}`;
+
+  const limit = checkRateLimit(rateKey);
+  if (!limit.allowed) {
+    const mins = Math.max(1, Math.ceil((limit.waitSec ?? 60) / 60));
+    return {
+      error: `Demasiados intentos fallidos. Por seguridad, espera ${mins} min antes de volver a intentarlo.`,
+    };
+  }
+
   const user = db.select().from(schema.users).where(eq(schema.users.username, username)).get();
   if (!user || !user.active || !bcrypt.compareSync(password, user.passwordHash)) {
+    recordFailedAttempt(rateKey);
     return { error: "Usuario o contraseña incorrectos" };
   }
+
+  clearFailedAttempts(rateKey);
   await createSession(user.id);
   redirect(user.mustChangePw ? "/cambiar-clave" : "/");
 }
@@ -250,5 +307,3 @@ export async function assignUserChurch(form: FormData): Promise<void> {
 
   revalidatePath("/admin");
 }
-
-

@@ -144,7 +144,6 @@ export default function StudioPlayer({
       }
     };
 
-    setIsLoadingAudio(true);
     engine
       .loadChannels(
         channels.map((ch) => ({
@@ -161,6 +160,15 @@ export default function StudioPlayer({
         if (!active) return;
         setDuration(engine.duration);
         setIsLoadingAudio(false);
+
+        if (!track.durationSec && engine.duration > 0) {
+          const roundedDur = Math.round(engine.duration);
+          fetch(`/api/tracks/${track.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ durationSec: roundedDur }),
+          }).catch(() => {});
+        }
       })
       .catch((err) => {
         console.error("Error al cargar pistas de audio en SoundTouch:", err);
@@ -241,6 +249,7 @@ export default function StudioPlayer({
             stemsError: null,
           }));
           if (newStems.length > 0) {
+            setIsLoadingAudio(true);
             setChannels(
               newStems.map((s) => ({
                 name: s.name,

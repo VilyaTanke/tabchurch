@@ -113,7 +113,7 @@ export default function Nav({
     nav.scrollLeft = scrollLeftStart.current - dx;
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLElement>) => {
+  const handlePointerUp = () => {
     if (!isPointerDown.current) return;
     isPointerDown.current = false;
     const nav = ref.current;
@@ -137,6 +137,15 @@ export default function Nav({
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         ref.current.scrollLeft += e.deltaY;
       }
+    }
+  };
+
+  const handleClearSwCaches = () => {
+    if (typeof window !== "undefined" && "caches" in window) {
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .catch(() => {});
     }
   };
 
@@ -192,7 +201,7 @@ export default function Nav({
           </div>
         </Link>
       )}
-      <form action={logout} className="nav-logout-form">
+      <form action={logout} className="nav-logout-form" onSubmit={handleClearSwCaches}>
         <button type="submit" className="nav-link">
           <span className="ico" aria-hidden>
             <LogOut size={18} strokeWidth={2.2} />

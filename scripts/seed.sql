@@ -1,8 +1,5 @@
-PRAGMA foreign_keys = OFF;
+﻿PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;
-DELETE FROM users;
-INSERT OR REPLACE INTO users (id, username, email, name, password_hash, role, must_change_pw, active, created_at) VALUES (1, 'admin', NULL, 'Administrador', '$2b$10$y4KQevzgJy9srBKAMMLRA.a5Fizswtuf9aKvUxnS1GSRdJBRRBAma', 'admin', 0, 1, 1792230137);
-INSERT OR REPLACE INTO users (id, username, email, name, password_hash, role, must_change_pw, active, created_at) VALUES (2, 'angelo', 'angelmagallanes80@gmail.com', 'Angel Magallanes', '$2b$10$eC07WBd/qpiFkp8aAdBtJezPPBqBHlZiQh3QULRsAabnipAFqKqKK', 'admin', 0, 1, 1792248158);
 DELETE FROM songs;
 INSERT OR REPLACE INTO songs (id, owner_id, title, artist, original_key, tempo, content_chordpro, notes, created_at, updated_at, current_key) VALUES (1, 1, 'Toda Lengua Y Toda Nación', 'Marcos Brunet', 'C', NULL, '
 

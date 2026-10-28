@@ -1,7 +1,8 @@
 import { SoundTouch, SimpleFilter, WebAudioBufferSource } from "soundtouchjs";
 import { Mp3Encoder } from "@breezystack/lamejs";
 
-// Caché en memoria para no re-descargar ni re-decodificar buffers de audio ya cargados
+// Caché LRU en memoria acotada (máx. 8 AudioBuffers) para evitar agotamiento de RAM en móviles/tablets
+const MAX_CACHED_BUFFERS = 8;
 const audioBufferCache = new Map<string, AudioBuffer>();
 
 export function clearAudioBufferCache(url?: string): void {
@@ -33,10 +34,15 @@ export async function ensureAudioContextResumed(ctx: AudioContext): Promise<void
   }
 }
 
-/** Descarga y decodifica el audio en un AudioBuffer (con caché en memoria). */
+/** Descarga y decodifica el audio en un AudioBuffer (con caché LRU acotada en memoria). */
 export async function loadAudioBuffer(url: string, ctx: AudioContext): Promise<AudioBuffer> {
   const cached = audioBufferCache.get(url);
-  if (cached) return cached;
+  if (cached) {
+    // Renovar posición LRU
+    audioBufferCache.delete(url);
+    audioBufferCache.set(url, cached);
+    return cached;
+  }
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -45,6 +51,13 @@ export async function loadAudioBuffer(url: string, ctx: AudioContext): Promise<A
   const arrayBuffer = await res.arrayBuffer();
   // decodeAudioData resamplea automáticamente a ctx.sampleRate
   const decoded = await ctx.decodeAudioData(arrayBuffer);
+
+  if (audioBufferCache.size >= MAX_CACHED_BUFFERS) {
+    const oldestKey = audioBufferCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      audioBufferCache.delete(oldestKey);
+    }
+  }
   audioBufferCache.set(url, decoded);
   return decoded;
 }
@@ -570,4 +583,3 @@ export async function renderTransposedMp3(
 
   return new Blob(mp3Chunks as BlobPart[], { type: "audio/mpeg" });
 }
-

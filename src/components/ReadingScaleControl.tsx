@@ -14,17 +14,20 @@ export default function ReadingScaleControl() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Inicializar estado
-    const docScale = document.documentElement.getAttribute("data-reading-scale") as ReadingScale;
-    const device = document.documentElement.getAttribute("data-device");
-    setIsTablet(device === "tablet");
-    if (docScale === "comfort" || docScale === "large" || docScale === "normal") {
-      setScaleState(docScale);
-    } else {
-      const stored = getStoredReadingScale();
-      if (stored) setScaleState(stored);
-      else if (device === "tablet") setScaleState("comfort");
-    }
+    const syncInitial = () => {
+      const docScale = document.documentElement.getAttribute("data-reading-scale") as ReadingScale;
+      const device = document.documentElement.getAttribute("data-device");
+      setIsTablet(device === "tablet");
+      if (docScale === "comfort" || docScale === "large" || docScale === "normal") {
+        setScaleState(docScale);
+      } else {
+        const stored = getStoredReadingScale();
+        if (stored) setScaleState(stored);
+        else if (device === "tablet") setScaleState("comfort");
+      }
+    };
+
+    const rafId = requestAnimationFrame(syncInitial);
 
     const handleChange = (e: Event) => {
       const customEvent = e as CustomEvent<ReadingScale>;
@@ -32,7 +35,10 @@ export default function ReadingScaleControl() {
     };
 
     window.addEventListener("reading-scale-changed", handleChange);
-    return () => window.removeEventListener("reading-scale-changed", handleChange);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("reading-scale-changed", handleChange);
+    };
   }, []);
 
   const selectScale = (newScale: ReadingScale) => {

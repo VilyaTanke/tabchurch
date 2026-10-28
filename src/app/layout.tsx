@@ -34,8 +34,8 @@ export const viewport: Viewport = {
   themeColor: "#0f1020",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 import PwaManager from "@/components/PwaManager";

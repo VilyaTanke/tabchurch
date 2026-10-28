@@ -24,6 +24,7 @@ export default function Reveal({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const path = usePathname();
+  const routeDep = onRoute ? path : null;
 
   useLayoutEffect(() => {
     const root = ref.current;
@@ -41,7 +42,7 @@ export default function Reveal({
     return () => {
       anim.revert();
     };
-  }, [selector, onRoute ? path : null]);
+  }, [selector, routeDep]);
 
   return (
     <div ref={ref} className={className}>

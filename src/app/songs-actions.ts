@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
@@ -140,7 +140,7 @@ export async function importSongFromUrl(url: string) {
   try {
     const data = await scrapeSongFromUrl(url);
     return { ok: true, song: data };
-  } catch (err: any) {
-    return { ok: false, error: err.message || "Error al importar el cifrado" };
+  } catch (err: unknown) {
+    return { ok: false, error: (err as Error)?.message || "Error al importar el cifrado" };
   }
 }

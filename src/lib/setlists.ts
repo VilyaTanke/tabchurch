@@ -2,8 +2,17 @@ import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 
-/** Lista accesible para el usuario (propias o compartidas en un grupo al que pertenece) */
-export function getSetlistFor(userId: number, setlistId: number) {
+/** Lista accesible para el usuario (propias, compartidas en su grupo o cualquier lista si es admin) */
+export function getSetlistFor(userId: number, setlistId: number, isAdmin = false) {
+  if (isAdmin) {
+    const anyList = db
+      .select()
+      .from(schema.setlists)
+      .where(eq(schema.setlists.id, setlistId))
+      .get();
+    if (anyList) return anyList;
+  }
+
   const own = db
     .select()
     .from(schema.setlists)
@@ -21,6 +30,28 @@ export function getSetlistFor(userId: number, setlistId: number) {
     .get();
 
   return shared?.setlist ?? null;
+}
+
+/** Determina si el usuario tiene permisos de edición sobre una lista (propietario, admin global o owner/editor del grupo) */
+export function canUserEditSetlist(
+  user: { id: number; role: string },
+  setlist: { ownerId: number; groupId: number | null }
+): boolean {
+  if (user.role === "admin" || setlist.ownerId === user.id) return true;
+  if (setlist.groupId) {
+    const role = db
+      .select({ role: schema.groupMembers.role })
+      .from(schema.groupMembers)
+      .where(
+        and(
+          eq(schema.groupMembers.groupId, setlist.groupId),
+          eq(schema.groupMembers.userId, user.id)
+        )
+      )
+      .get()?.role;
+    return role === "owner" || role === "editor";
+  }
+  return false;
 }
 
 export function getSetlistItems(setlistId: number) {

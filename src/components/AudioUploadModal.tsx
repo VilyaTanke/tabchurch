@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, X, Sparkles, FileAudio, Music } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import { DEFAULT_STEM_MODEL, STEM_MODELS } from "@/lib/stems";
+import type { GalleryTrackItem } from "@/components/TrackCard";
 
 interface SongOption {
   id: number;
@@ -23,12 +24,13 @@ export default function AudioUploadModal({
   songs: SongOption[];
   isOpen: boolean;
   onClose: () => void;
-  onTrackUploaded?: (track: any) => void;
+  onTrackUploaded?: (track: GalleryTrackItem) => void;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [detectedDuration, setDetectedDuration] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [selectedSongId, setSelectedSongId] = useState<string>("");
@@ -48,7 +50,27 @@ export default function AudioUploadModal({
     if (!file) return;
 
     setSelectedFile(file);
+    setDetectedDuration(null);
     setErrorMsg(null);
+
+    // Detectar duración del archivo automáticamente en el navegador
+    try {
+      const objUrl = URL.createObjectURL(file);
+      const tempAudio = new Audio();
+      tempAudio.preload = "metadata";
+      tempAudio.onloadedmetadata = () => {
+        if (Number.isFinite(tempAudio.duration) && tempAudio.duration > 0) {
+          setDetectedDuration(Math.round(tempAudio.duration * 10) / 10);
+        }
+        URL.revokeObjectURL(objUrl);
+      };
+      tempAudio.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+      };
+      tempAudio.src = objUrl;
+    } catch {
+      // Ignorar si falla la lectura preliminar de metadatos
+    }
 
     // Sugerir título limpiando la extensión
     const cleanName = file.name.replace(/\.[^/.]+$/, "");
@@ -93,6 +115,7 @@ export default function AudioUploadModal({
       if (selectedSongId) formData.append("songId", selectedSongId);
       if (musicalKey) formData.append("musicalKey", musicalKey);
       if (bpm) formData.append("bpm", bpm);
+      if (detectedDuration) formData.append("durationSec", String(detectedDuration));
       formData.append("autoSeparate", String(autoSeparate));
       formData.append("model", stemModel);
 

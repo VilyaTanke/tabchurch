@@ -10,6 +10,7 @@ import {
   semitonesBetween,
   transposeContent,
   transposeKey,
+  type Line,
 } from "@/lib/chordpro";
 import {
   SlidersHorizontal,
@@ -24,6 +25,23 @@ import {
   Music,
 } from "lucide-react";
 import { updateSongKey } from "@/app/songs-actions";
+import { translateLyricsToSpanish } from "@/app/translate-action";
+
+function annotateChorusBlocks(rawBlocks: Line[][]): { line: Line; inChorus: boolean }[][] {
+  let chorusActive = false;
+  const result: { line: Line; inChorus: boolean }[][] = [];
+  for (const blockLines of rawBlocks) {
+    const annotatedBlock: { line: Line; inChorus: boolean }[] = [];
+    for (const line of blockLines) {
+      if (line.type === "chorus") {
+        chorusActive = line.open;
+      }
+      annotatedBlock.push({ line, inChorus: chorusActive });
+    }
+    result.push(annotatedBlock);
+  }
+  return result;
+}
 
 export function SongBody({
   content,
@@ -39,15 +57,14 @@ export function SongBody({
   hideTabs?: boolean;
 }) {
   const lines = useMemo(() => parseChordPro(content), [content]);
-  const blocks = useMemo(() => {
-    if (!twoColumns) return [lines];
-    return partitionSongLines(lines);
-  }, [lines, twoColumns]);
+  const blocks = useMemo(
+    () => annotateChorusBlocks(twoColumns ? partitionSongLines(lines) : [lines]),
+    [lines, twoColumns]
+  );
 
-  let inChorus = false;
   return (
     <div className={`song ${twoColumns ? "has-columns" : ""}`} style={{ fontSize: size }}>
-      {blocks.map((blockLines, blockIdx) => (
+      {blocks.map((blockItems, blockIdx) => (
         <div key={blockIdx} className="song-section-chunk">
           {blockIdx > 0 && (
             <div className="song-section-divider">
@@ -58,11 +75,8 @@ export function SongBody({
             </div>
           )}
           <div className={`song-block ${twoColumns ? "two-cols" : ""}`}>
-            {blockLines.map((l, i) => {
-              if (l.type === "chorus") {
-                inChorus = l.open;
-                return null;
-              }
+            {blockItems.map(({ line: l, inChorus }, i) => {
+              if (l.type === "chorus") return null;
               if (l.type === "blank") return <div key={i} className="song-gap" />;
               if (l.type === "comment") return <div key={i} className="song-comment">{l.text}</div>;
               if (l.type === "section_break") return null;
@@ -108,8 +122,6 @@ export function SongBody({
     </div>
   );
 }
-
-import { translateLyricsToSpanish } from "@/app/translate-action";
 
 export default function SongViewer({
   songId,

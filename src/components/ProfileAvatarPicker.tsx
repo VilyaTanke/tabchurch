@@ -8,7 +8,6 @@ import {
   RotateCw,
   ZoomIn,
   ZoomOut,
-  User,
   KeyRound,
   Shield,
   Sparkles,
