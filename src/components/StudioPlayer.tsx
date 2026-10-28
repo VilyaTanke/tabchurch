@@ -343,7 +343,7 @@ export default function StudioPlayer({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ durationSec: roundedDur }),
-          }).catch(() => { });
+          }).catch(() => {});
         }
       })
       .catch((err) => {
@@ -398,7 +398,7 @@ export default function StudioPlayer({
 
   // Screen Wake Lock API y Watchdog de pantalla para Tablets en atril
   useEffect(() => {
-    requestStoragePersistence().catch(() => { });
+    requestStoragePersistence().catch(() => {});
     requestScreenWakeLock().then((acquired) => {
       setWakeLockActive(acquired);
     });
@@ -409,7 +409,7 @@ export default function StudioPlayer({
           setWakeLockActive(acquired);
         });
         if (engineRef.current && isPlaying) {
-          engineRef.current.play().catch(() => { });
+          engineRef.current.play().catch(() => {});
         }
       }
     };
@@ -948,8 +948,8 @@ export default function StudioPlayer({
           activePreset !== "all"
             ? `_${activePreset}`
             : semitones !== 0
-              ? `_${displayedTransposedKey}`
-              : "_mezcla";
+            ? `_${displayedTransposedKey}`
+            : "_mezcla";
         a.href = url;
         a.download = `${track.title.replace(/[^\w\s-]/g, "").trim() || "estudio"}${suffix}_24bit.wav`;
         a.click();
@@ -974,10 +974,10 @@ export default function StudioPlayer({
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => { });
+      containerRef.current.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => { });
+      document.exitFullscreen().catch(() => {});
       setIsFullscreen(false);
     }
   };
@@ -1785,8 +1785,8 @@ export default function StudioPlayer({
                 isLoadingAudio
                   ? "Cargando audio..."
                   : isPlaying
-                    ? "Pausar (Espacio)"
-                    : "Reproducir (Espacio)"
+                  ? "Pausar (Espacio)"
+                  : "Reproducir (Espacio)"
               }
             >
               {isLoadingAudio ? (
