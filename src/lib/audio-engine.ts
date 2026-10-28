@@ -1,5 +1,6 @@
 import { SoundTouch, SimpleFilter, WebAudioBufferSource } from "soundtouchjs";
 import { Mp3Encoder } from "@breezystack/lamejs";
+import { STEMS_CACHE_NAME, isTabletDevice } from "./tablet-profiler";
 
 // Caché LRU en memoria acotada (máx. 8 AudioBuffers) para evitar agotamiento de RAM en móviles/tablets
 const MAX_CACHED_BUFFERS = 8;
@@ -23,37 +24,81 @@ export function getSharedAudioContext(): AudioContext {
     const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    sharedAudioContext = new AudioCtx({ latencyHint: "interactive" });
+
+    // En tablets y móviles, "playback" ofrece mayor resiliencia contra underruns de buffer
+    const isTablet = isTabletDevice();
+    const latencyHint = isTablet ? "playback" : "interactive";
+
+    sharedAudioContext = new AudioCtx({ latencyHint });
+
+    // Watchdog de auto-recuperación ante interrupciones (llamadas, alarmas o atenuación en iOS/Android)
+    sharedAudioContext.onstatechange = () => {
+      if (sharedAudioContext && (sharedAudioContext.state === "suspended" || (sharedAudioContext.state as string) === "interrupted")) {
+        sharedAudioContext.resume().catch(() => {});
+      }
+    };
   }
   return sharedAudioContext;
 }
 
 export async function ensureAudioContextResumed(ctx: AudioContext): Promise<void> {
-  if (ctx.state === "suspended") {
-    await ctx.resume();
+  if (ctx.state === "suspended" || (ctx.state as string) === "interrupted") {
+    await ctx.resume().catch(() => {});
   }
 }
 
-/** Descarga y decodifica el audio en un AudioBuffer (con caché LRU acotada en memoria). */
+/** Descarga y decodifica el audio en un AudioBuffer (con caché en memoria LRU y almacenamiento flash persistente). */
 export async function loadAudioBuffer(url: string, ctx: AudioContext): Promise<AudioBuffer> {
-  const cached = audioBufferCache.get(url);
-  if (cached) {
+  // 1. Verificar si ya está en la memoria RAM viva (LRU)
+  const cachedMem = audioBufferCache.get(url);
+  if (cachedMem) {
     // Renovar posición LRU
     audioBufferCache.delete(url);
-    audioBufferCache.set(url, cached);
-    return cached;
+    audioBufferCache.set(url, cachedMem);
+    return cachedMem;
   }
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Error al descargar el audio (${res.status})`);
+  let arrayBuffer: ArrayBuffer | null = null;
+
+  // 2. Intentar leer desde el almacenamiento flash de la tablet (Cache Storage persistente)
+  if (typeof window !== "undefined" && "caches" in window) {
+    try {
+      const cache = await caches.open(STEMS_CACHE_NAME);
+      const match = await cache.match(url);
+      if (match && match.ok) {
+        arrayBuffer = await match.arrayBuffer();
+      }
+    } catch {
+      // Continuar con fetch si la caché falla
+    }
   }
-  let arrayBuffer: ArrayBuffer | null = await res.arrayBuffer();
+
+  // 3. Si no estaba en almacenamiento flash local, descargar de la red y guardar en flash
+  if (!arrayBuffer) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Error al descargar el audio (${res.status})`);
+    }
+
+    if (typeof window !== "undefined" && "caches" in window) {
+      try {
+        const cache = await caches.open(STEMS_CACHE_NAME);
+        // Clonar respuesta antes de leer el cuerpo
+        cache.put(url, res.clone()).catch(() => {});
+      } catch {
+        // Ignorar fallos de escritura de caché
+      }
+    }
+
+    arrayBuffer = await res.arrayBuffer();
+  }
+
   // decodeAudioData resamplea automáticamente a ctx.sampleRate
   const decoded = await ctx.decodeAudioData(arrayBuffer);
-  // Liberar referencia al buffer comprimido original para optimizar RAM (patrón Mossi)
+  // Liberar referencia al buffer comprimido original de inmediato para reducir pico de RAM en tablets
   arrayBuffer = null;
 
+  // Mantener acotada la memoria RAM
   if (audioBufferCache.size >= MAX_CACHED_BUFFERS) {
     const oldestKey = audioBufferCache.keys().next().value;
     if (oldestKey !== undefined) {
@@ -425,7 +470,7 @@ export class MultiTrackSoundTouchEngine {
   private soundTouch: SoundTouch | null = null;
   private filter: SimpleFilter | null = null;
   private mixSamples: Float32Array;
-  private bufferSize = 2048;
+  private bufferSize: number;
   private totalFrames = 0;
 
   public isPlaying = false;
@@ -438,8 +483,11 @@ export class MultiTrackSoundTouchEngine {
   public onEnded?: () => void;
   public onMeterUpdate?: (meter: MasterMeterTelemetry) => void;
 
-  constructor() {
+  constructor(customBufferSize?: number) {
     this.ctx = getSharedAudioContext();
+    // En tablets, 4096 muestras proporcionan un colchón acústico anti-underrun superior
+    const isTablet = isTabletDevice();
+    this.bufferSize = customBufferSize || (isTablet ? 4096 : 2048);
     this.mixSamples = new Float32Array(this.bufferSize * 2);
     this.masterGain = this.ctx.createGain();
     this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
@@ -472,44 +520,56 @@ export class MultiTrackSoundTouchEngine {
 
     let loadedCount = 0;
     const waveforms: Record<string, StemWaveformTelemetry> = {};
+    const loaded: TrackChannelInternal[] = [];
 
-    const loaded = await Promise.all(
-      specs.map(async (spec) => {
-        const buffer = await loadAudioBuffer(spec.url, this.ctx);
-        const { peaks, rmsDb } = computeWaveformPeaks(buffer, 200);
-        waveforms[spec.name] = { peaks, rmsDb };
+    // Decodificación escalonada en lotes de 2 para eliminar picos de RAM en iPadOS y Android Tablets
+    const BATCH_SIZE = 2;
+    for (let i = 0; i < specs.length; i += BATCH_SIZE) {
+      const batch = specs.slice(i, i + BATCH_SIZE);
+      const batchLoaded = await Promise.all(
+        batch.map(async (spec) => {
+          const buffer = await loadAudioBuffer(spec.url, this.ctx);
+          const { peaks, rmsDb } = computeWaveformPeaks(buffer, 200);
+          waveforms[spec.name] = { peaks, rmsDb };
 
-        loadedCount++;
-        onProgress?.(loadedCount, specs.length, spec.name);
+          loadedCount++;
+          onProgress?.(loadedCount, specs.length, spec.name);
 
-        const ch0 = buffer.getChannelData(0);
-        const ch1 = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : ch0;
-        const vol = spec.volume ?? 1.0;
-        const pan = spec.pan ?? 0.0;
-        const muted = !!spec.muted;
-        const solo = !!spec.solo;
+          const ch0 = buffer.getChannelData(0);
+          const ch1 = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : ch0;
+          const vol = spec.volume ?? 1.0;
+          const pan = spec.pan ?? 0.0;
+          const muted = !!spec.muted;
+          const solo = !!spec.solo;
 
-        const panAngle = ((Math.max(-1, Math.min(1, pan)) + 1) * Math.PI) / 4;
-        const initGainL = muted ? 0 : vol * Math.cos(panAngle) * Math.SQRT2;
-        const initGainR = muted ? 0 : vol * Math.sin(panAngle) * Math.SQRT2;
+          const panAngle = ((Math.max(-1, Math.min(1, pan)) + 1) * Math.PI) / 4;
+          const initGainL = muted ? 0 : vol * Math.cos(panAngle) * Math.SQRT2;
+          const initGainR = muted ? 0 : vol * Math.sin(panAngle) * Math.SQRT2;
 
-        return {
-          name: spec.name,
-          url: spec.url,
-          buffer,
-          ch0,
-          ch1,
-          volume: vol,
-          pan,
-          muted,
-          solo,
-          smoothGainL: initGainL,
-          smoothGainR: initGainR,
-          peaks,
-          rmsDb,
-        };
-      })
-    );
+          return {
+            name: spec.name,
+            url: spec.url,
+            buffer,
+            ch0,
+            ch1,
+            volume: vol,
+            pan,
+            muted,
+            solo,
+            smoothGainL: initGainL,
+            smoothGainR: initGainR,
+            peaks,
+            rmsDb,
+          };
+        })
+      );
+      loaded.push(...batchLoaded);
+
+      // Ceder un ciclo al recolector de basura del navegador entre lotes
+      if (i + BATCH_SIZE < specs.length) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
 
     this.channels = loaded;
     this.duration = Math.max(0, ...loaded.map((c) => c.buffer.duration));
@@ -787,6 +847,9 @@ export class MultiTrackSoundTouchEngine {
       // Ignorar
     }
     this.channels = [];
+    if (isTabletDevice()) {
+      clearAudioBufferCache();
+    }
   }
 }
 

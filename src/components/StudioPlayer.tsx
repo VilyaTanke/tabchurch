@@ -22,6 +22,10 @@ import {
   Sliders,
   Activity,
   Disc3,
+  Zap,
+  Check,
+  CloudDownload,
+  ShieldCheck,
 } from "lucide-react";
 import { formatDuration, stemColor, stemLabel, type StemFile, type StemModel } from "@/lib/stems";
 import { transposeKey } from "@/lib/chordpro";
@@ -30,6 +34,16 @@ import {
   MultiTrackSoundTouchEngine,
   type StemWaveformTelemetry,
 } from "@/lib/audio-engine";
+import {
+  getHardwareProfile,
+  requestScreenWakeLock,
+  releaseScreenWakeLock,
+  isStemCachedLocally,
+  saveStemToLocalCache,
+  deleteStemFromLocalCache,
+  requestStoragePersistence,
+  type HardwareProfile,
+} from "@/lib/tablet-profiler";
 
 export type StudioTrackData = {
   id: number;
@@ -112,12 +126,27 @@ export default function StudioPlayer({
   const [isExportingMix, setIsExportingMix] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
 
+  // Optimizaciones de hardware y escenario para Tablets
+  const [hardwareProfile, setHardwareProfile] = useState<HardwareProfile | null>(null);
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
+  const [isSavingOffline, setIsSavingOffline] = useState(false);
+  const [isEcoMode, setIsEcoMode] = useState(false);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const canvasMapRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
   const vuBarLRef = useRef<HTMLDivElement>(null);
   const vuBarRRef = useRef<HTMLDivElement>(null);
   const vuDbLabelRef = useRef<HTMLSpanElement>(null);
+
+  // Referencias para manipulación directa del DOM (Zero Re-renders en bucle de reproducción a 60/30fps)
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const playheadTagRef = useRef<HTMLDivElement>(null);
+  const scrubSliderRef = useRef<HTMLInputElement>(null);
+  const timeCurrentLabelRef = useRef<HTMLSpanElement>(null);
+  const lastWaveformRedrawRef = useRef<number>(0);
+  const lastReactSyncRef = useRef<number>(0);
 
   // Motor multipista sincronizado al sample (Fusión SoundTouch WSOLA + Mossi Phase-Locked Bus)
   const engineRef = useRef<MultiTrackSoundTouchEngine | null>(null);
@@ -305,16 +334,69 @@ export default function StudioPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelsKey]);
 
-  // Redibujar formas de onda cuando cambian picos, volumen, mute/solo o el tamaño de ventana
+  // Redibujar formas de onda estáticas cuando cambian picos, canales o volumen/mute/solo
   useEffect(() => {
-    drawAllWaveforms(currentTime, duration);
-  }, [drawAllWaveforms, currentTime, duration]);
+    const cur = engineRef.current?.getCurrentTime() ?? 0;
+    drawAllWaveforms(cur, duration);
+  }, [drawAllWaveforms, duration]);
 
   useEffect(() => {
     const onResize = () => drawAllWaveforms(engineRef.current?.getCurrentTime() ?? 0, duration);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [drawAllWaveforms, duration]);
+
+  // Detección de perfil de hardware y verificación de almacenamiento offline
+  useEffect(() => {
+    let active = true;
+    getHardwareProfile(isEcoMode).then((prof) => {
+      if (!active) return;
+      setHardwareProfile(prof);
+    });
+
+    const checkOffline = async () => {
+      if (channels.length === 0) return;
+      let allCached = true;
+      for (const ch of channels) {
+        const cached = await isStemCachedLocally(ch.url);
+        if (!cached) {
+          allCached = false;
+          break;
+        }
+      }
+      if (active) setIsOfflineSaved(allCached);
+    };
+    checkOffline();
+
+    return () => {
+      active = false;
+    };
+  }, [channels, isEcoMode]);
+
+  // Screen Wake Lock API y Watchdog de pantalla para Tablets en atril
+  useEffect(() => {
+    requestStoragePersistence().catch(() => {});
+    requestScreenWakeLock().then((acquired) => {
+      setWakeLockActive(acquired);
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        requestScreenWakeLock().then((acquired) => {
+          setWakeLockActive(acquired);
+        });
+        if (engineRef.current && isPlaying) {
+          engineRef.current.play().catch(() => {});
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      releaseScreenWakeLock();
+    };
+  }, [isPlaying]);
 
   // Actualizar comportamiento en bucle (loop)
   useEffect(() => {
@@ -439,11 +521,22 @@ export default function StudioPlayer({
     (timeSec: number) => {
       const clamped = Math.max(0, Math.min(duration || 1000, timeSec));
       setCurrentTime(clamped);
+      const safeDur = duration > 0 ? duration : 1;
+      const pct = Math.max(0, Math.min(100, (clamped / safeDur) * 100));
+
+      // Sincronización directa al DOM
+      if (playheadRef.current) playheadRef.current.style.left = `${pct}%`;
+      if (playheadTagRef.current) playheadTagRef.current.textContent = formatDuration(clamped);
+      if (scrubSliderRef.current) scrubSliderRef.current.value = String(clamped);
+      if (timeCurrentLabelRef.current) timeCurrentLabelRef.current.textContent = formatDuration(clamped);
+
+      drawAllWaveforms(clamped, duration);
+
       if (engineRef.current) {
         engineRef.current.seek(clamped);
       }
     },
-    [duration]
+    [duration, drawAllWaveforms]
   );
 
   const handlePlay = useCallback(async () => {
@@ -459,9 +552,12 @@ export default function StudioPlayer({
   const handlePause = useCallback(() => {
     if (engineRef.current) {
       engineRef.current.pause();
+      const cur = engineRef.current.getCurrentTime();
+      setCurrentTime(cur);
+      drawAllWaveforms(cur, duration);
     }
     setIsPlaying(false);
-  }, []);
+  }, [duration, drawAllWaveforms]);
 
   const handleTogglePlay = useCallback(() => {
     if (isPlaying) {
@@ -478,6 +574,72 @@ export default function StudioPlayer({
     },
     [currentTime, handleSeek]
   );
+
+  // Almacenar o eliminar stems en la memoria flash de la tablet para uso 100% offline
+  const handleToggleOfflineSave = async () => {
+    if (isSavingOffline || channels.length === 0) return;
+    setIsSavingOffline(true);
+    try {
+      if (isOfflineSaved) {
+        for (const ch of channels) {
+          await deleteStemFromLocalCache(ch.url);
+        }
+        setIsOfflineSaved(false);
+      } else {
+        await requestStoragePersistence();
+        for (const ch of channels) {
+          await saveStemToLocalCache(ch.url);
+        }
+        setIsOfflineSaved(true);
+      }
+    } catch (err) {
+      console.warn("Error al actualizar almacenamiento offline de stems:", err);
+    } finally {
+      setIsSavingOffline(false);
+    }
+  };
+
+  // Integración nativa con MediaSession API (pantalla bloqueada, auriculares, pedales de escenario Bluetooth)
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title,
+        artist: track.artist || "Tab-church",
+        album: "Estudio Z",
+        artwork: [{ src: "/iconoApp.svg", sizes: "512x512", type: "image/svg+xml" }],
+      });
+
+      navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+
+      navigator.mediaSession.setActionHandler("play", () => handlePlay());
+      navigator.mediaSession.setActionHandler("pause", () => handlePause());
+      navigator.mediaSession.setActionHandler("seekbackward", () => handleSkip(-5));
+      navigator.mediaSession.setActionHandler("seekforward", () => handleSkip(5));
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (typeof details.seekTime === "number") {
+          handleSeek(details.seekTime);
+        }
+      });
+    } catch {
+      // Ignorar navegadores sin soporte completo
+    }
+
+    return () => {
+      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        try {
+          navigator.mediaSession.setActionHandler("play", null);
+          navigator.mediaSession.setActionHandler("pause", null);
+          navigator.mediaSession.setActionHandler("seekbackward", null);
+          navigator.mediaSession.setActionHandler("seekforward", null);
+          navigator.mediaSession.setActionHandler("seekto", null);
+        } catch {
+          // Ignorar
+        }
+      }
+    };
+  }, [track.title, track.artist, isPlaying, handlePlay, handlePause, handleSkip, handleSeek]);
 
   // Atajos de teclado de estudio (Espacio = Play/Pause, Flechas = ±5s) al estilo Mossi
   useEffect(() => {
@@ -499,15 +661,43 @@ export default function StudioPlayer({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isLoadingAudio, handleTogglePlay, handleSkip]);
 
-  // Bucle de sincronización de tiempo a 60fps con requestAnimationFrame
+  // Bucle de sincronización de tiempo directo al DOM (Zero Re-renders en el árbol React durante reproducción)
   useEffect(() => {
     let animId: number;
 
-    const updateTick = () => {
+    const updateTick = (now: number) => {
       if (engineRef.current && isPlaying) {
         const cur = engineRef.current.getCurrentTime();
-        setCurrentTime(cur);
+        const safeDur = duration > 0 ? duration : 1;
+        const pct = Math.max(0, Math.min(100, (cur / safeDur) * 100));
+
+        // 1. Mover aguja por estilo directo (GPU compositor sin recalcular layout)
+        if (playheadRef.current) {
+          playheadRef.current.style.left = `${pct}%`;
+        }
+        if (playheadTagRef.current) {
+          playheadTagRef.current.textContent = formatDuration(cur);
+        }
+        if (scrubSliderRef.current) {
+          scrubSliderRef.current.value = String(cur);
+        }
+        if (timeCurrentLabelRef.current) {
+          timeCurrentLabelRef.current.textContent = formatDuration(cur);
+        }
+
+        // 2. Throttled: Redibujar división de color en formas de onda cada 250ms (en lugar de cada frame)
+        if (now - lastWaveformRedrawRef.current > 250) {
+          lastWaveformRedrawRef.current = now;
+          drawAllWaveforms(cur, duration);
+        }
+
+        // 3. Throttled: Sincronizar estado React cada 1 segundo para drawers/acordes
+        if (now - lastReactSyncRef.current > 1000) {
+          lastReactSyncRef.current = now;
+          setCurrentTime(cur);
+        }
       }
+
       if (isPlaying) {
         animId = requestAnimationFrame(updateTick);
       }
@@ -518,7 +708,7 @@ export default function StudioPlayer({
     }
 
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying]);
+  }, [isPlaying, duration, drawAllWaveforms]);
 
   // Modificar canal individual (volumen, panorama, mute, solo)
   const updateChannel = (name: string, updates: Partial<StemChannelState>) => {
@@ -885,6 +1075,53 @@ export default function StudioPlayer({
         </div>
 
         <div className="studio-telemetry-pills">
+          {/* Botón para persistir stems en almacenamiento flash de la tablet (Modo 100% Offline) */}
+          <button
+            type="button"
+            className={`telemetry-badge tablet-offline-btn ${isOfflineSaved ? "saved" : ""}`}
+            onClick={handleToggleOfflineSave}
+            disabled={isSavingOffline || channels.length === 0}
+            title={
+              isOfflineSaved
+                ? "Stems guardados en la memoria flash de la tablet para uso 100% offline. Clic para liberar espacio."
+                : "Guardar todos los stems en la memoria flash de la tablet para ensayar sin internet"
+            }
+          >
+            {isOfflineSaved ? (
+              <>
+                <Check size={12} style={{ color: "#10b981" }} />
+                <span>En Disco (Offline)</span>
+              </>
+            ) : (
+              <>
+                <CloudDownload size={12} className={isSavingOffline ? "spin-icon" : ""} />
+                <span>{isSavingOffline ? "Guardando..." : "Guardar Offline"}</span>
+              </>
+            )}
+          </button>
+
+          {/* Selector de Modo Eco / Escenario adaptativo para Tablets */}
+          <button
+            type="button"
+            className={`telemetry-badge tablet-eco-btn ${isEcoMode ? "eco-active" : ""}`}
+            onClick={() => setIsEcoMode((e) => !e)}
+            title={`Perfil detectado: ${hardwareProfile ? `${hardwareProfile.isTablet ? "Tablet" : "Desktop"} (${hardwareProfile.tier}, ${hardwareProfile.recommendedBufferSize} samples)` : "Estándar"}. Clic para alternar Modo Escenario / Ahorro de Recursos.`}
+          >
+            <Zap size={12} />
+            <span>{isEcoMode ? "Modo Eco" : "Modo Normal"}</span>
+          </button>
+
+          {/* Indicador de pantalla activa en atril (Screen Wake Lock) */}
+          {wakeLockActive && (
+            <span
+              className="telemetry-badge tablet-wakelock-badge"
+              title="Screen Wake Lock activo: la pantalla no se apagará en el atril"
+            >
+              <ShieldCheck size={12} style={{ color: "#dfba73" }} />
+              <span>Pantalla Activa</span>
+            </span>
+          )}
+
           <span
             className={`telemetry-badge ${isBitPerfectBypass ? "bypass" : "wsola"}`}
             title={
@@ -901,7 +1138,7 @@ export default function StudioPlayer({
             </span>
           </span>
           <span className="telemetry-ram" title="Memoria PCM Float32 activa en Web Audio API">
-            RAM Audio: <strong>{ramUsageMb} MB</strong>
+            RAM: <strong>{ramUsageMb} MB</strong>
           </span>
         </div>
       </div>
@@ -1084,12 +1321,13 @@ export default function StudioPlayer({
           >
             {/* Aguja / Cursor de reproducción sincronizado */}
             <div
+              ref={playheadRef}
               className="playback-playhead"
               style={{
                 left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
               }}
             >
-              <div className="playhead-tag">{formatDuration(currentTime)}</div>
+              <div ref={playheadTagRef} className="playhead-tag">{formatDuration(currentTime)}</div>
             </div>
 
             {channels.map((ch) => {
@@ -1241,13 +1479,14 @@ export default function StudioPlayer({
 
           {/* Línea de tiempo / Progreso de tiempo */}
           <div className="controls-timeline-scrub">
-            <span className="time-display">{formatDuration(currentTime)}</span>
+            <span ref={timeCurrentLabelRef} className="time-display">{formatDuration(currentTime)}</span>
             <input
+              ref={scrubSliderRef}
               type="range"
               min="0"
               max={duration || 100}
               step="0.05"
-              value={currentTime}
+              defaultValue={currentTime}
               onChange={(e) => handleSeek(Number(e.target.value))}
               className="scrub-slider"
             />
