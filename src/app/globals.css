@@ -990,6 +990,13 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   width: 100%;
 }
 
+.sl-drag-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
 .sl-drag-handle {
   display: inline-flex;
   align-items: center;
@@ -1002,13 +1009,54 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   border-radius: 8px;
   min-width: 36px;
   min-height: var(--sl-btn-h);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   transition: color 0.15s, background 0.15s;
 }
 
 .sl-drag-handle:active {
   cursor: grabbing;
-  color: var(--text);
-  background: var(--surface-2);
+  color: #dfba73;
+  background: rgba(223, 186, 115, 0.15);
+}
+
+.sl-reorder-arrows {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sl-arrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.sl-arrow-btn:hover:not(:disabled) {
+  color: #dfba73;
+  background: rgba(223, 186, 115, 0.15);
+  border-color: rgba(223, 186, 115, 0.4);
+}
+
+.sl-arrow-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.sl-arrow-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  border-color: transparent;
 }
 
 .sl-row-info {
@@ -3977,8 +4025,31 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
 .pan-slider,
 .scrub-slider,
 .master-slider,
-.timeline-tracks-area {
+.timeline-tracks-area,
+.sl-drag-handle {
   touch-action: none;
+}
+
+html[data-device="tablet"] .sl-drag-handle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+}
+html[data-device="tablet"] .sl-arrow-btn {
+  width: 28px;
+  height: 22px;
+}
+
+@media (pointer: coarse) {
+  .sl-drag-handle {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+  }
+  .sl-arrow-btn {
+    width: 28px;
+    height: 22px;
+  }
 }
 
 /* Reglas ergonómicas para Tablets (iPadOS, Android Tablet con data-device="tablet") */

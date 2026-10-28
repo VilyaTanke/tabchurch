@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   closestCenter,
   useSensor,
@@ -32,6 +32,8 @@ import {
   Music,
   ExternalLink,
   Eye,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import {
@@ -65,20 +67,28 @@ export type LibSong = { id: number; title: string; artist: string | null };
 
 function Row({
   item,
+  index,
+  totalItems,
   setlistId,
   canEdit,
   onRemove,
   onKey,
   onNotes,
   onTwoColumns,
+  onMoveUp,
+  onMoveDown,
 }: {
   item: Item;
+  index: number;
+  totalItems: number;
   setlistId: number;
   canEdit: boolean;
   onRemove: () => void;
   onKey: (k: string) => void;
   onNotes: (n: string) => void;
   onTwoColumns: (val: boolean) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: !canEdit });
@@ -108,19 +118,44 @@ function Row({
         transition,
       }}
     >
-      {/* Cabecera del ítem: Asa de arrastre + Título/Artista + Botón Eliminar */}
+      {/* Cabecera del ítem: Asa de arrastre + Botones Reordenar + Título/Artista + Botón Eliminar */}
       <div className="sl-row-header">
         {canEdit && (
-          <button
-            type="button"
-            className="sl-drag-handle"
-            aria-label={`Mover ${item.title}`}
-            {...attributes}
-            {...listeners}
-            title="Arrastra para reordenar"
-          >
-            <GripVertical size={18} />
-          </button>
+          <div className="sl-drag-group">
+            <button
+              type="button"
+              className="sl-drag-handle"
+              aria-label={`Mover ${item.title}`}
+              style={{ touchAction: "none" }}
+              {...attributes}
+              {...listeners}
+              title="Mantén presionado y arrastra para reordenar"
+            >
+              <GripVertical size={18} />
+            </button>
+            <div className="sl-reorder-arrows" aria-label="Reordenar posición">
+              <button
+                type="button"
+                className="sl-arrow-btn"
+                onClick={onMoveUp}
+                disabled={index === 0}
+                aria-label={`Subir ${item.title}`}
+                title="Mover arriba"
+              >
+                <ChevronUp size={14} />
+              </button>
+              <button
+                type="button"
+                className="sl-arrow-btn"
+                onClick={onMoveDown}
+                disabled={index === totalItems - 1}
+                aria-label={`Bajar ${item.title}`}
+                title="Mover abajo"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+          </div>
         )}
 
         <div className="sl-row-info grow">
@@ -277,8 +312,8 @@ export default function SetlistEditor({
   const [allSaved, setAllSaved] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -301,6 +336,15 @@ export default function SetlistEditor({
     setItems(next);
     start(() => reorderSetlist(setlistId, next.map((i) => i.id)));
   }
+
+  const handleMoveItem = (currentIndex: number, direction: "up" | "down") => {
+    if (!canEdit) return;
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    const next = arrayMove(items, currentIndex, targetIndex);
+    setItems(next);
+    start(() => reorderSetlist(setlistId, next.map((i) => i.id)));
+  };
 
   const handleSaveAll = () => {
     if (!canEdit) return;
@@ -389,15 +433,24 @@ export default function SetlistEditor({
             </p>
           )}
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+            autoScroll
+          >
             <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
               <ol className="sl-list">
-                {items.map((it) => (
+                {items.map((it, idx) => (
                   <Row
                     key={it.id}
                     item={it}
+                    index={idx}
+                    totalItems={items.length}
                     setlistId={setlistId}
                     canEdit={canEdit}
+                    onMoveUp={() => handleMoveItem(idx, "up")}
+                    onMoveDown={() => handleMoveItem(idx, "down")}
                     onRemove={() => {
                       if (!canEdit) return;
                       setItems((l) => l.filter((x) => x.id !== it.id));
