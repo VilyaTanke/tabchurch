@@ -354,7 +354,7 @@ export default function StudioPlayer({
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ durationSec: roundedDur }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
       })
       .catch((err) => {
@@ -409,7 +409,7 @@ export default function StudioPlayer({
 
   // Screen Wake Lock API y Watchdog de pantalla para Tablets en atril
   useEffect(() => {
-    requestStoragePersistence().catch(() => {});
+    requestStoragePersistence().catch(() => { });
     requestScreenWakeLock().then((acquired) => {
       setWakeLockActive(acquired);
     });
@@ -420,7 +420,7 @@ export default function StudioPlayer({
           setWakeLockActive(acquired);
         });
         if (engineRef.current && isPlaying) {
-          engineRef.current.play().catch(() => {});
+          engineRef.current.play().catch(() => { });
         }
       }
     };
@@ -1028,8 +1028,8 @@ export default function StudioPlayer({
           activePreset !== "all"
             ? `_${activePreset}`
             : semitones !== 0
-            ? `_${displayedTransposedKey}`
-            : "_mezcla";
+              ? `_${displayedTransposedKey}`
+              : "_mezcla";
         a.href = url;
         a.download = `${track.title.replace(/[^\w\s-]/g, "").trim() || "estudio"}${suffix}_24bit.wav`;
         a.click();
@@ -1054,10 +1054,10 @@ export default function StudioPlayer({
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
+      containerRef.current.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   };
@@ -1561,16 +1561,16 @@ export default function StudioPlayer({
               );
             })}
 
-            {/* Botón en la parte inferior del panel de canales para agregar pistas de grabación con botón (+) */}
+            {/* Botón (+) en la parte inferior del panel de canales para agregar pistas de grabación */}
             <div className="mixer-add-channel-bar">
               <button
                 type="button"
-                className="btn-add-rec-channel"
+                className="btn-add-rec-channel-icon"
                 onClick={handleAddRecordingChannel}
-                title="Agregar nuevo canal para grabación de audio física"
+                title="Agregar canal de grabación (+)"
+                aria-label="Agregar canal de grabación"
               >
-                <Plus size={15} />
-                <span>Agregar canal de grabación</span>
+                <Plus size={18} />
               </button>
             </div>
           </div>
@@ -1649,10 +1649,10 @@ export default function StudioPlayer({
                     {telemetry
                       ? `RMS: ${telemetry.rmsDb} dB · Pan: ${formatPanLabel(ch.pan)}`
                       : ch.isRecordable && !ch.url
-                      ? ch.isArmed
-                        ? "● Canal Armado (Presiona Grabar para capturar)"
-                        : "Canal de grabación vacío"
-                      : "Decodificando onda..."}
+                        ? ch.isArmed
+                          ? "● Canal Armado (Presiona Grabar para capturar)"
+                          : "Canal de grabación vacío"
+                        : "Decodificando onda..."}
                   </div>
 
                   <canvas
@@ -1915,8 +1915,8 @@ export default function StudioPlayer({
                 isLoadingAudio
                   ? "Cargando audio..."
                   : isPlaying
-                  ? "Pausar (Espacio)"
-                  : "Reproducir (Espacio)"
+                    ? "Pausar (Espacio)"
+                    : "Reproducir (Espacio)"
               }
             >
               {isLoadingAudio ? (
