@@ -11,14 +11,15 @@ import {
 } from "lucide-react";
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
+import AlphabetFilter from "@/components/AlphabetFilter";
 
 export const metadata = { title: "Artistas · Tab-NuevaVida" };
 
 export default async function ArtistsPage({
   searchParams,
-}: { searchParams: Promise<{ q?: string; artist?: string }> }) {
+}: { searchParams: Promise<{ q?: string; artist?: string; letter?: string }> }) {
   const user = await requireUser();
-  const { q = "", artist = "" } = await searchParams;
+  const { q = "", artist = "", letter = "" } = await searchParams;
 
   // 1. Obtener lista de todos los artistas con conteo de canciones globales
   const artistsSummary = db
@@ -31,10 +32,24 @@ export default async function ArtistsPage({
     .orderBy(asc(sql`coalesce(nullif(trim(${schema.songs.artist}), ''), 'Sin artista')`))
     .all();
 
-  // Filtrar artistas si hay búsqueda rápida
-  const filteredArtists = artistsSummary.filter((a) =>
-    a.artist.toLowerCase().includes(q.toLowerCase().trim())
-  );
+  // Filtrar artistas si hay búsqueda rápida o filtro por letra
+  const normLetter = letter.trim().toUpperCase();
+  const filteredArtists = artistsSummary.filter((a) => {
+    // 1. Filtro de búsqueda por texto
+    if (q.trim() && !a.artist.toLowerCase().includes(q.toLowerCase().trim())) {
+      return false;
+    }
+    // 2. Filtro alfabético
+    if (normLetter && normLetter !== "ALL") {
+      const firstChar = a.artist.trim().charAt(0).toUpperCase();
+      if (normLetter === "#" || normLetter === "0-9") {
+        return !/^[A-ZÁÉÍÓÚÑ]/i.test(firstChar);
+      }
+      const normFirst = firstChar.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return normFirst === normLetter;
+    }
+    return true;
+  });
 
   // 2. Si se selecciona un artista, obtener sus canciones
   let selectedSongs: (typeof schema.songs.$inferSelect)[] = [];
@@ -103,6 +118,14 @@ export default async function ArtistsPage({
         </Link>
       </div>
 
+      {/* Abecedario para filtrar artistas por inicial */}
+      <AlphabetFilter
+        currentLetter={letter}
+        baseUrl="/canciones/artistas"
+        preserveParams={{ q, artist }}
+        allLabel="Todos"
+      />
+
       {/* Buscador de artistas */}
       <form className="row" role="search">
         <input
@@ -112,6 +135,8 @@ export default async function ArtistsPage({
           placeholder="Filtrar artista (ej. Barak, Hillsong, Miel San Marcos)…"
           aria-label="Filtrar artistas"
         />
+        {letter && <input type="hidden" name="letter" value={letter} />}
+        {artist && <input type="hidden" name="artist" value={artist} />}
         <button
           className="btn ghost"
           style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
@@ -119,14 +144,14 @@ export default async function ArtistsPage({
           <Search size={14} />
           <span>Filtrar</span>
         </button>
-        {q && (
+        {(q || (normLetter && normLetter !== "ALL")) && (
           <Link
-            href="/canciones/artistas"
+            href={artist ? `/canciones/artistas?artist=${encodeURIComponent(artist)}` : "/canciones/artistas"}
             className="btn ghost small"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
             <X size={13} />
-            <span>Limpiar</span>
+            <span>Limpiar filtros</span>
           </Link>
         )}
       </form>

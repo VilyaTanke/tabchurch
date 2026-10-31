@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { desc, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, like, or, sql } from "drizzle-orm";
 import {
   Clock,
   User,
@@ -12,6 +12,7 @@ import {
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
 import SongLibraryManager from "@/components/SongLibraryManager";
+import AlphabetFilter from "@/components/AlphabetFilter";
 
 export const metadata = { title: "Canciones · Tab-NuevaVida" };
 
@@ -36,16 +37,43 @@ function getPaginationWindow(current: number, total: number): (number | "ellipsi
 
 export default async function SongsPage({
   searchParams,
-}: { searchParams: Promise<{ q?: string; page?: string }> }) {
+}: { searchParams: Promise<{ q?: string; page?: string; letter?: string }> }) {
   const user = await requireUser();
-  const { q = "", page = "1" } = await searchParams;
+  const { q = "", page = "1", letter = "" } = await searchParams;
   const currentPage = Math.max(1, Number(page) || 1);
   const offset = (currentPage - 1) * PAGE_SIZE;
 
-  const term = `%${q.trim().replace(/[%_]/g, "")}%`;
-  const whereClause = q.trim()
-    ? or(like(schema.songs.title, term), like(schema.songs.artist, term))
-    : undefined;
+  const conditions = [];
+
+  if (q.trim()) {
+    const term = `%${q.trim().replace(/[%_]/g, "")}%`;
+    conditions.push(or(like(schema.songs.title, term), like(schema.songs.artist, term)));
+  }
+
+  const normLetter = letter.trim().toUpperCase();
+  if (normLetter && normLetter !== "ALL") {
+    if (normLetter === "#" || normLetter === "0-9") {
+      conditions.push(
+        sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) GLOB '[0-9]*' OR SUBSTR(TRIM(${schema.songs.title}), 1, 1) NOT GLOB '[a-zA-ZáéíóúÁÉÍÓÚñÑ]*'`
+      );
+    } else if (normLetter === "A") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('A', 'a', 'Á', 'á')`);
+    } else if (normLetter === "E") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('E', 'e', 'É', 'é')`);
+    } else if (normLetter === "I") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('I', 'i', 'Í', 'í')`);
+    } else if (normLetter === "O") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('O', 'o', 'Ó', 'ó')`);
+    } else if (normLetter === "U") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('U', 'u', 'Ú', 'ú')`);
+    } else if (normLetter === "N") {
+      conditions.push(sql`SUBSTR(TRIM(${schema.songs.title}), 1, 1) IN ('N', 'n', 'Ñ', 'ñ')`);
+    } else {
+      conditions.push(sql`LOWER(SUBSTR(TRIM(${schema.songs.title}), 1, 1)) = ${normLetter.toLowerCase()}`);
+    }
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const totalCountResult = db
     .select({ count: sql<number>`count(*)` })
@@ -56,11 +84,13 @@ export default async function SongsPage({
   const totalSongs = totalCountResult?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalSongs / PAGE_SIZE));
 
+  const isLetterFiltered = Boolean(normLetter && normLetter !== "ALL");
+
   const songs = db
     .select()
     .from(schema.songs)
     .where(whereClause)
-    .orderBy(desc(schema.songs.updatedAt))
+    .orderBy(isLetterFiltered ? asc(schema.songs.title) : desc(schema.songs.updatedAt))
     .limit(PAGE_SIZE)
     .offset(offset)
     .all();
@@ -68,6 +98,7 @@ export default async function SongsPage({
   const buildPageUrl = (p: number) => {
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
+    if (isLetterFiltered) params.set("letter", normLetter);
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
     return qs ? `/canciones?${qs}` : "/canciones";
@@ -112,6 +143,14 @@ export default async function SongsPage({
           </Link>
         </div>
 
+        {/* Abecedario para filtrar canciones por inicial */}
+        <AlphabetFilter
+          currentLetter={letter}
+          baseUrl="/canciones"
+          preserveParams={{ q }}
+          allLabel="Todas"
+        />
+
         <form className="row" role="search">
           <input
             name="q"
@@ -120,6 +159,7 @@ export default async function SongsPage({
             placeholder="Buscar por título o artista…"
             aria-label="Buscar canciones"
           />
+          {letter && <input type="hidden" name="letter" value={letter} />}
           <button
             className="btn ghost"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
@@ -127,14 +167,14 @@ export default async function SongsPage({
             <Search size={14} />
             <span>Buscar</span>
           </button>
-          {q && (
+          {(q || isLetterFiltered) && (
             <Link
               href="/canciones"
               className="btn ghost small"
               style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
             >
               <X size={13} />
-              <span>Limpiar filtro</span>
+              <span>Limpiar filtros</span>
             </Link>
           )}
         </form>
