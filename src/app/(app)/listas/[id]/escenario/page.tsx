@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
+import { canUserEditSetlist, getSetlistFor, getSetlistItems } from "@/lib/setlists";
 import StageMode from "@/components/StageMode";
 
 export const metadata = {
@@ -16,13 +16,15 @@ export default async function SetlistStagePage({
   const { id } = await params;
   const setlistId = Number(id);
 
-  const list = getSetlistFor(user.id, setlistId);
+  const list = getSetlistFor(user.id, setlistId, user.role === "admin");
   if (!list) notFound();
 
   const items = getSetlistItems(setlistId);
   if (items.length === 0) {
     notFound();
   }
+
+  const canEdit = canUserEditSetlist(user, list);
 
   const songs = items.map((it) => ({
     itemId: it.id,
@@ -41,8 +43,8 @@ export default async function SetlistStagePage({
   return (
     <StageMode
       songs={songs}
-      setlistName={list.name}
       setlistId={list.id}
+      canEdit={canEdit}
     />
   );
 }

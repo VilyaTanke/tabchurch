@@ -2,7 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function importModule(url: string): Promise<any> {
+interface LiquidAppInstance {
+  loadImage: (src: string) => Promise<void>;
+  setRain: (enabled: boolean) => void;
+  setRainTime: (time: number) => void;
+  dispose?: () => void;
+  liquidPlane?: {
+    material?: {
+      metalness: number;
+      roughness: number;
+    };
+    uniforms?: {
+      displacementScale?: {
+        value: number;
+      };
+    };
+  };
+}
+
+type LiquidBackgroundFactory = (canvas: HTMLCanvasElement) => LiquidAppInstance;
+
+interface LiquidModule {
+  default?: LiquidBackgroundFactory;
+}
+
+function importModule(url: string): Promise<LiquidModule | LiquidBackgroundFactory> {
   // Use new Function so TypeScript does not attempt static module resolution at build time
   return new Function("u", "return import(u)")(url);
 }
@@ -13,14 +37,14 @@ export default function LiquidLoginBackground() {
 
   useEffect(() => {
     let isCancelled = false;
-    let liquidApp: any = null;
+    let liquidApp: LiquidAppInstance | null = null;
 
     async function init() {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
       try {
-        let LiquidBackgroundModule: any;
+        let LiquidBackgroundModule: LiquidModule | LiquidBackgroundFactory;
         try {
           // Attempt local vendor file first
           LiquidBackgroundModule = await importModule("/vendor/liquid1.min.js");
@@ -33,7 +57,10 @@ export default function LiquidLoginBackground() {
 
         if (isCancelled || !canvasRef.current) return;
 
-        const LiquidBackground = LiquidBackgroundModule.default || LiquidBackgroundModule;
+        const LiquidBackground: LiquidBackgroundFactory =
+          typeof LiquidBackgroundModule === "function"
+            ? LiquidBackgroundModule
+            : (LiquidBackgroundModule.default as LiquidBackgroundFactory);
         const app = LiquidBackground(canvas);
         liquidApp = app;
 

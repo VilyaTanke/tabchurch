@@ -74,11 +74,14 @@ function transposeSingleChord(chord: string, steps: number, flat: boolean): stri
 
 export function transposeKey(key: string | null | undefined, steps: number): string | null {
   if (!key) return null;
-  const m = /^([A-G][#b]?)(m?)$/.exec(key);
-  if (!m) return key;
-  const newRoot = shiftNote(m[1], steps, false);
+  const clean = key.trim();
+  const m = /^([A-G][#b]?)(m?)$/i.exec(clean);
+  if (!m) return clean;
+  const rootNote = m[1].toUpperCase();
+  const isMinor = m[2].toLowerCase() === "m";
+  const newRoot = shiftNote(rootNote, steps, false);
   // elegir grafía (# o b) según el nuevo tono
-  return shiftNote(m[1], steps, keyPrefersFlats(newRoot + m[2])) + m[2];
+  return shiftNote(rootNote, steps, keyPrefersFlats(newRoot + (isMinor ? "m" : ""))) + (isMinor ? "m" : "");
 }
 
 /** Transpone todos los [acordes] del texto. */

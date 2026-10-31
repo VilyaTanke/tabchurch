@@ -3,6 +3,15 @@ import { integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite
 
 const now = sql`(unixepoch())`;
 
+export const churches = sqliteTable("churches", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  city: text("city"),
+  address: text("address"),
+  notes: text("notes"),
+  createdAt: integer("created_at").notNull().default(now),
+});
+
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   username: text("username").notNull().unique(),
@@ -13,6 +22,7 @@ export const users = sqliteTable("users", {
   mustChangePw: integer("must_change_pw", { mode: "boolean" }).notNull().default(true),
   active: integer("active", { mode: "boolean" }).notNull().default(true),
   avatar: text("avatar"),
+  churchId: integer("church_id").references(() => churches.id, { onDelete: "set null" }),
   createdAt: integer("created_at").notNull().default(now),
 });
 
@@ -39,7 +49,7 @@ export const songs = sqliteTable("songs", {
 export const groups = sqliteTable("groups", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdBy: integer("created_by").notNull().references(() => users.id, { onDelete: "cascade" }),
 });
 
 export const groupMembers = sqliteTable(

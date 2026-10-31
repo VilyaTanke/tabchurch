@@ -13,6 +13,16 @@ export const metadata: Metadata = {
   title: "Tab-NuevaVida · Cifrados para tu grupo",
   description: "Guarda cifrados de canciones, organiza listas y compártelas con tu grupo de alabanza.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/iconoApp.svg", type: "image/svg+xml" },
+      { url: "/iconoApp.jpg", type: "image/jpeg" },
+    ],
+    apple: [
+      { url: "/iconoApp.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/iconoApp.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -24,8 +34,8 @@ export const viewport: Viewport = {
   themeColor: "#0f1020",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 import PwaManager from "@/components/PwaManager";

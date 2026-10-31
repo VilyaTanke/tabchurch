@@ -8,6 +8,14 @@ import { eq } from "drizzle-orm";
 import * as schema from "./schema";
 
 const DDL = `
+CREATE TABLE IF NOT EXISTS churches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  city TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
@@ -18,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   must_change_pw INTEGER NOT NULL DEFAULT 1,
   active INTEGER NOT NULL DEFAULT 1,
   avatar TEXT,
+  church_id INTEGER REFERENCES churches(id) ON DELETE SET NULL,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -41,7 +50,7 @@ CREATE TABLE IF NOT EXISTS songs (
 CREATE TABLE IF NOT EXISTS groups (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  created_by INTEGER NOT NULL REFERENCES users(id)
+  created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS group_members (
   group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
@@ -88,7 +97,23 @@ CREATE TABLE IF NOT EXISTS tracks (
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE INDEX IF NOT EXISTS tracks_song_idx ON tracks(song_id);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS users_church_idx ON users(church_id);
+CREATE INDEX IF NOT EXISTS songs_updated_idx ON songs(updated_at DESC);
+CREATE INDEX IF NOT EXISTS songs_artist_idx ON songs(artist);
+CREATE INDEX IF NOT EXISTS setlists_owner_idx ON setlists(owner_id);
+CREATE INDEX IF NOT EXISTS setlists_group_idx ON setlists(group_id);
+CREATE INDEX IF NOT EXISTS setlist_items_setlist_pos_idx ON setlist_items(setlist_id, position);
+CREATE INDEX IF NOT EXISTS setlist_items_song_idx ON setlist_items(song_id);
 `;
+
+function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string) {
+  const cols = sqlite.pragma(`table_info(${table})`) as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+  }
+}
 
 function init() {
   const dir = path.join(process.cwd(), "data");
@@ -97,26 +122,28 @@ function init() {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
   sqlite.exec(DDL);
-  try {
-    sqlite.exec("ALTER TABLE songs ADD COLUMN current_key TEXT;");
-  } catch {
-    // Columna ya existe
-  }
-  try {
-    sqlite.exec("ALTER TABLE setlist_items ADD COLUMN two_columns INTEGER NOT NULL DEFAULT 0;");
-  } catch {
-    // Columna ya existe
-  }
-  try {
-    sqlite.exec("ALTER TABLE setlists ADD COLUMN group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE;");
-  } catch {
-    // Columna ya existe
-  }
-  try {
-    sqlite.exec("ALTER TABLE users ADD COLUMN avatar TEXT;");
-  } catch {
-    // Columna ya existe
-  }
+
+  // Migraciones incrementales seguras verificando metadatos reales de la tabla
+  ensureColumn(sqlite, "songs", "current_key", "TEXT");
+  ensureColumn(sqlite, "setlist_items", "two_columns", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(sqlite, "setlists", "group_id", "INTEGER REFERENCES groups(id) ON DELETE CASCADE");
+  ensureColumn(sqlite, "users", "avatar", "TEXT");
+  ensureColumn(sqlite, "users", "church_id", "INTEGER REFERENCES churches(id) ON DELETE SET NULL");
+
+  // Asegurar que los índices existan también en bases de datos ya creadas
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS tracks_song_idx ON tracks(song_id);
+    CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions(expires_at);
+    CREATE INDEX IF NOT EXISTS users_church_idx ON users(church_id);
+    CREATE INDEX IF NOT EXISTS songs_updated_idx ON songs(updated_at DESC);
+    CREATE INDEX IF NOT EXISTS songs_artist_idx ON songs(artist);
+    CREATE INDEX IF NOT EXISTS setlists_owner_idx ON setlists(owner_id);
+    CREATE INDEX IF NOT EXISTS setlists_group_idx ON setlists(group_id);
+    CREATE INDEX IF NOT EXISTS setlist_items_setlist_pos_idx ON setlist_items(setlist_id, position);
+    CREATE INDEX IF NOT EXISTS setlist_items_song_idx ON setlist_items(song_id);
+  `);
+
   const db = drizzle(sqlite, { schema });
 
   // Seed del primer administrador (debe cambiar la clave al entrar).

@@ -11,6 +11,7 @@ import {
   semitonesBetween,
   transposeContent,
   transposeKey,
+  type Line,
 } from "@/lib/chordpro";
 import {
   SlidersHorizontal,
@@ -25,6 +26,23 @@ import {
   Music,
 } from "lucide-react";
 import { updateSongKey } from "@/app/songs-actions";
+import { translateLyricsToSpanish } from "@/app/translate-action";
+
+function annotateChorusBlocks(rawBlocks: Line[][]): { line: Line; inChorus: boolean }[][] {
+  let chorusActive = false;
+  const result: { line: Line; inChorus: boolean }[][] = [];
+  for (const blockLines of rawBlocks) {
+    const annotatedBlock: { line: Line; inChorus: boolean }[] = [];
+    for (const line of blockLines) {
+      if (line.type === "chorus") {
+        chorusActive = line.open;
+      }
+      annotatedBlock.push({ line, inChorus: chorusActive });
+    }
+    result.push(annotatedBlock);
+  }
+  return result;
+}
 
 export function SongBody({
   content,
@@ -40,15 +58,14 @@ export function SongBody({
   hideTabs?: boolean;
 }) {
   const lines = useMemo(() => parseChordPro(content), [content]);
-  const blocks = useMemo(() => {
-    if (!twoColumns) return [lines];
-    return partitionSongLines(lines);
-  }, [lines, twoColumns]);
+  const blocks = useMemo(
+    () => annotateChorusBlocks(twoColumns ? partitionSongLines(lines) : [lines]),
+    [lines, twoColumns]
+  );
 
-  let inChorus = false;
   return (
     <div className={`song ${twoColumns ? "has-columns" : ""}`} style={{ fontSize: size }}>
-      {blocks.map((blockLines, blockIdx) => (
+      {blocks.map((blockItems, blockIdx) => (
         <div key={blockIdx} className="song-section-chunk">
           {blockIdx > 0 && (
             <div className="song-section-divider">
@@ -59,11 +76,8 @@ export function SongBody({
             </div>
           )}
           <div className={`song-block ${twoColumns ? "two-cols" : ""}`}>
-            {blockLines.map((l, i) => {
-              if (l.type === "chorus") {
-                inChorus = l.open;
-                return null;
-              }
+            {blockItems.map(({ line: l, inChorus }, i) => {
+              if (l.type === "chorus") return null;
               if (l.type === "blank") return <div key={i} className="song-gap" />;
               if (l.type === "comment") return <div key={i} className="song-comment">{l.text}</div>;
               if (l.type === "section_break") return null;
@@ -129,8 +143,6 @@ export function SongBody({
   );
 }
 
-import { translateLyricsToSpanish } from "@/app/translate-action";
-
 export default function SongViewer({
   songId,
   content,
@@ -170,11 +182,31 @@ export default function SongViewer({
   const activeKey = transposeKey(originalKey, steps);
 
   const bump = (d: number) => {
-    setSteps((s) => (((s + d + 6) % 12) + 12) % 12 - 6);
+    const nextSteps = (((steps + d + 6) % 12) + 12) % 12 - 6;
+    setSteps(nextSteps);
     setSavedFeedback(false);
+    const nextKey = transposeKey(originalKey, nextSteps);
+    window.dispatchEvent(
+      new CustomEvent("zamar-key-sync", {
+        detail: { key: nextKey, semitones: nextSteps, source: "song-viewer" },
+      })
+    );
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches)
       animate(".key-badge", { scale: [1.3, 1], duration: 500, ease: "outElastic(1, .5)" });
   };
+
+  // Sincronizar tono si el usuario lo cambia desde el reproductor mini de Zamar
+  useEffect(() => {
+    const handleKeySync = (e: Event) => {
+      const detail = (e as CustomEvent<{ key?: string; semitones?: number; source?: string }>).detail;
+      if (detail && detail.source !== "song-viewer" && typeof detail.semitones === "number") {
+        setSteps(detail.semitones);
+        setSavedFeedback(false);
+      }
+    };
+    window.addEventListener("zamar-key-sync", handleKeySync);
+    return () => window.removeEventListener("zamar-key-sync", handleKeySync);
+  }, []);
 
   const handleSaveKey = () => {
     if (!songId || !activeKey) return;

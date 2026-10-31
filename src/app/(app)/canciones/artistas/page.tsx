@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, desc, eq, like, or, sql } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import {
   Plus,
   Clock,
@@ -9,7 +9,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { db, schema } from "@/db";
-import { requireUser } from "@/lib/auth";
+import { canManageSongs, requireUser } from "@/lib/auth";
 
 export const metadata = { title: "Artistas · Tab-NuevaVida" };
 
@@ -36,7 +36,7 @@ export default async function ArtistsPage({
   );
 
   // 2. Si se selecciona un artista, obtener sus canciones
-  let selectedSongs: any[] = [];
+  let selectedSongs: (typeof schema.songs.$inferSelect)[] = [];
   if (artist) {
     const isSinArtista = artist === "Sin artista";
     selectedSongs = db
@@ -61,14 +61,16 @@ export default async function ArtistsPage({
             Explora tus cifrados organizados por autor o agrupación.
           </p>
         </div>
-        <Link
-          href="/canciones/nueva"
-          className="btn"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-        >
-          <Plus size={16} />
-          <span>Nueva</span>
-        </Link>
+        {canManageSongs(user) && (
+          <Link
+            href="/canciones/nueva"
+            className="btn"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Plus size={16} />
+            <span>Nueva</span>
+          </Link>
+        )}
       </div>
 
       <div className="row" style={{ gap: "0.5rem" }}>

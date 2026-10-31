@@ -5,35 +5,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
-import { getSetlistFor } from "@/lib/setlists";
+import { getUserGroupRole } from "@/lib/groups";
+import { canUserEditSetlist, getSetlistFor } from "@/lib/setlists";
 import type { FormState } from "@/app/actions";
 
 async function canModify(setlistId: number) {
   const user = await requireUser();
-  const list = getSetlistFor(user.id, setlistId);
+  const list = getSetlistFor(user.id, setlistId, user.role === "admin");
   if (!list) throw new Error("Lista no encontrada");
 
-  // Si es el creador de la lista o admin
-  if (list.ownerId === user.id || user.role === "admin") {
+  if (canUserEditSetlist(user, list)) {
     return { user, list };
-  }
-
-  // Si la lista es de un grupo, revisar si el usuario es owner o editor del grupo
-  if (list.groupId) {
-    const role = db
-      .select({ role: schema.groupMembers.role })
-      .from(schema.groupMembers)
-      .where(
-        and(
-          eq(schema.groupMembers.groupId, list.groupId),
-          eq(schema.groupMembers.userId, user.id)
-        )
-      )
-      .get()?.role;
-
-    if (role === "owner" || role === "editor") {
-      return { user, list };
-    }
   }
 
   throw new Error("No tienes permiso para editar esta lista");
@@ -46,6 +28,13 @@ export async function createSetlist(_: FormState, form: FormData): Promise<FormS
   const eventDate = String(form.get("eventDate") ?? "") || null;
   const groupIdRaw = form.get("groupId");
   const groupId = groupIdRaw ? Number(groupIdRaw) : null;
+
+  if (groupId) {
+    const myRole = getUserGroupRole(user.id, groupId);
+    if (user.role !== "admin" && myRole !== "owner" && myRole !== "editor") {
+      return { error: "Solo los propietarios o editores pueden crear listas para este grupo" };
+    }
+  }
 
   const row = db
     .insert(schema.setlists)
@@ -81,7 +70,7 @@ export async function deleteSetlist(form: FormData) {
 }
 
 export async function addSongToSetlist(setlistId: number, songId: number) {
-  const { user } = await canModify(setlistId);
+  await canModify(setlistId);
   const song = db
     .select()
     .from(schema.songs)

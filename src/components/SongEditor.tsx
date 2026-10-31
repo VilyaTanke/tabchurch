@@ -1,10 +1,19 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { Globe, Download, Edit3, Eye, Save } from "lucide-react";
+import { useActionState, useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Globe, Download, Edit3, Eye, Save, SlidersHorizontal, RotateCcw, Check, X, AlertTriangle } from "lucide-react";
 import { saveSong, importSongFromUrl } from "@/app/songs-actions";
 import { SongBody } from "@/components/SongViewer";
-import { KEYS, convertChordsOverLyrics, diatonicChords } from "@/lib/chordpro";
+import {
+  KEYS,
+  convertChordsOverLyrics,
+  diatonicChords,
+  transposeContent,
+  transposeKey,
+  semitonesBetween,
+  keyPrefersFlats,
+} from "@/lib/chordpro";
 
 type Song = {
   id?: number; title?: string; artist?: string | null; originalKey?: string | null; currentKey?: string | null;
@@ -21,7 +30,9 @@ Que a un [F]infeliz [C]salvó
 `;
 
 export default function SongEditor({ song }: { song?: Song }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(saveSong, undefined);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [title, setTitle] = useState(song?.title ?? "");
   const [artist, setArtist] = useState(song?.artist ?? "");
   const [content, setContent] = useState(song?.contentChordpro ?? "");
@@ -31,7 +42,55 @@ export default function SongEditor({ song }: { song?: Song }) {
   const [importUrl, setImportUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
+  const [transposeFeedback, setTransposeFeedback] = useState("");
   const ta = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!showCancelModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowCancelModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showCancelModal]);
+
+  const handleExitWithoutSaving = () => {
+    setShowCancelModal(false);
+    if (song?.id) {
+      router.push(`/canciones/${song.id}`);
+    } else {
+      router.push("/canciones");
+    }
+  };
+
+  const handleTransposeStep = (delta: number) => {
+    const fromKey = currKey || origKey || "C";
+    const targetKey = transposeKey(fromKey, delta);
+    if (!targetKey) return;
+    const flat = keyPrefersFlats(targetKey);
+    const newContent = transposeContent(content, delta, flat);
+    setContent(newContent);
+    setCurrKey(targetKey);
+    if (!origKey) setOrigKey(fromKey);
+    setTransposeFeedback(`Cifrado transpuesto a ${targetKey}`);
+    setTimeout(() => setTransposeFeedback(""), 2500);
+  };
+
+  const handleTransposeTo = (targetKey: string) => {
+    if (!targetKey) return;
+    const fromKey = currKey || origKey || "C";
+    const steps = semitonesBetween(fromKey, targetKey);
+    if (steps === 0) return;
+    const flat = keyPrefersFlats(targetKey);
+    const newContent = transposeContent(content, steps, flat);
+    setContent(newContent);
+    setCurrKey(targetKey);
+    if (!origKey) setOrigKey(fromKey);
+    setTransposeFeedback(`Cifrado transpuesto a ${targetKey}`);
+    setTimeout(() => setTransposeFeedback(""), 2500);
+  };
 
   const handleImport = async () => {
     if (!importUrl.trim()) return;
@@ -51,7 +110,7 @@ export default function SongEditor({ song }: { song?: Song }) {
       } else {
         setImportError(res.error || "No se pudo extraer la canción");
       }
-    } catch (e: any) {
+    } catch {
       setImportError("Error de conexión al importar");
     } finally {
       setImporting(false);
@@ -82,6 +141,29 @@ export default function SongEditor({ song }: { song?: Song }) {
   return (
     <form action={action} className="stack">
       {song?.id && <input type="hidden" name="id" value={song.id} />}
+
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setShowCancelModal(true)}
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <X size={16} />
+          <span>Cancelar</span>
+        </button>
+
+        <button
+          type="submit"
+          className="btn"
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <Save size={16} />
+          <span>{pending ? "Guardando…" : "Guardar canción"}</span>
+        </button>
+      </div>
 
       {/* Importador Rápido por URL */}
       {!song?.id && (
@@ -210,6 +292,128 @@ export default function SongEditor({ song }: { song?: Song }) {
           </div>
         </div>
 
+        {/* Barra de Transposición de Tonalidad del Cifrado */}
+        <div
+          className="row"
+          style={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.55rem 0.85rem",
+            background: "rgba(223, 186, 115, 0.09)",
+            border: "1px solid rgba(212, 175, 55, 0.3)",
+            borderRadius: "12px",
+            flexWrap: "wrap",
+            gap: "0.65rem",
+          }}
+        >
+          <div className="row" style={{ gap: "0.65rem", alignItems: "center", flexWrap: "wrap" }}>
+            <span
+              style={{
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              <SlidersHorizontal size={15} />
+              <span>Transponer acordes:</span>
+            </span>
+
+            {/* Controles de tono paso a paso (- / + semitono) */}
+            <div className="zmp-key-control">
+              <button
+                type="button"
+                className="zmp-key-btn"
+                onClick={() => handleTransposeStep(-1)}
+                title="Bajar medio tono (-1 semitono a todos los acordes)"
+                aria-label="Bajar medio tono"
+              >
+                −
+              </button>
+              <div
+                className="zmp-key-display"
+                style={{ cursor: "default" }}
+                title={`Tono actual del cifrado: ${currKey || "—"}`}
+              >
+                <span className="zmp-key-text">{currKey || "—"}</span>
+              </div>
+              <button
+                type="button"
+                className="zmp-key-btn"
+                onClick={() => handleTransposeStep(1)}
+                title="Subir medio tono (+1 semitono a todos los acordes)"
+                aria-label="Subir medio tono"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Selector directo de tono destino */}
+            <div className="row" style={{ gap: "0.35rem", alignItems: "center" }}>
+              <span className="muted" style={{ fontSize: "0.8rem" }}>a:</span>
+              <select
+                className="key-select"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "8px",
+                  padding: "0.2rem 0.5rem",
+                  fontSize: "0.84rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                }}
+                value={currKey}
+                onChange={(e) => handleTransposeTo(e.target.value)}
+                aria-label="Transponer cifrado directamente a otro tono"
+                title="Elige un tono para transponer todos los acordes automáticamente"
+              >
+                <option value="" disabled>Seleccionar tono…</option>
+                {KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {k} {origKey && k === origKey ? "(original)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botón para restablecer al tono original si está transpuesto */}
+            {origKey && currKey && origKey !== currKey && (
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => handleTransposeTo(origKey)}
+                style={{ fontSize: "0.78rem", padding: "0.2rem 0.55rem" }}
+                title={`Restablecer acordes al tono original (${origKey})`}
+              >
+                <RotateCcw size={12} style={{ marginRight: "3px" }} />
+                <span>Restablecer ({origKey})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Notificación de transposición */}
+          {transposeFeedback && (
+            <span
+              className="badge"
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                color: "#059669",
+                fontSize: "0.78rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+            >
+              <Check size={13} />
+              <span>{transposeFeedback}</span>
+            </span>
+          )}
+        </div>
+
         <div className="chip-bar" role="toolbar" aria-label="Insertar acordes">
           {chords.map((c) => (
             <button type="button" key={c} className="chip" onClick={() => insert(`[${c}]`)}>{c}</button>
@@ -247,8 +451,9 @@ export default function SongEditor({ song }: { song?: Song }) {
       </section>
 
       {state?.error && <div className="alert error" role="alert">{state.error}</div>}
-      <div className="row">
+      <div className="row" style={{ gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
         <button
+          type="submit"
           className="btn"
           disabled={pending}
           style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
@@ -256,7 +461,81 @@ export default function SongEditor({ song }: { song?: Song }) {
           <Save size={16} />
           <span>{pending ? "Guardando…" : "Guardar canción"}</span>
         </button>
+
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setShowCancelModal(true)}
+          disabled={pending}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}
+        >
+          <X size={16} />
+          <span>Cancelar</span>
+        </button>
       </div>
+
+      {showCancelModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowCancelModal(false)}
+          style={{ zIndex: 999 }}
+        >
+          <div
+            className="modal-box card stack"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "440px", width: "92%", padding: "1.75rem", gap: "1.25rem" }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="row" style={{ gap: "0.85rem", alignItems: "flex-start" }}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  color: "var(--danger, #ef4444)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginTop: "0.15rem",
+                }}
+              >
+                <AlertTriangle size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700 }}>
+                  ¿Desea salir sin guardar cambios?
+                </h3>
+                <p className="muted" style={{ margin: "0.4rem 0 0", fontSize: "0.9rem" }}>
+                  Los cambios realizados en el cifrado no se guardarán.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="row"
+              style={{ justifyContent: "flex-end", gap: "0.75rem" }}
+            >
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setShowCancelModal(false)}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                onClick={handleExitWithoutSaving}
+              >
+                Sí
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

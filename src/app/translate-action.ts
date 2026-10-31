@@ -5,8 +5,11 @@ import { requireUser } from "@/lib/auth";
 /**
  * Traduce texto de canciones (inglés, portugués, etc.) al español
  * conservando los acordes entre corchetes [Acorde] intactos.
+ * Optimizado para enviar el texto agrupado en una sola petición HTTP.
  */
-export async function translateLyricsToSpanish(chordproText: string): Promise<{ ok: boolean; text?: string; error?: string }> {
+export async function translateLyricsToSpanish(
+  chordproText: string
+): Promise<{ ok: boolean; text?: string; error?: string }> {
   await requireUser();
 
   if (!chordproText || !chordproText.trim()) {
@@ -15,64 +18,102 @@ export async function translateLyricsToSpanish(chordproText: string): Promise<{ 
 
   try {
     const lines = chordproText.split("\n");
-    const translatedLines: string[] = [];
+    const chords: string[] = [];
+    const translatableIndices: number[] = [];
+    const preparedLines: string[] = [];
 
-    // Traducir por bloques o líneas de letra respetando los tokens de acordes
-    for (const line of lines) {
-      // Si es una directiva o línea vacía o solo acordes, conservarla
+    for (let idx = 0; idx < lines.length; idx++) {
+      const line = lines[idx];
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("{")) {
-        translatedLines.push(line);
         continue;
       }
 
-      // Separar letra y acordes: reemplazamos [acorde] con marcadores especiales
-      const chords: string[] = [];
-      const textToTranslate = line.replace(/\[([^\]]+)\]/g, (_, chord) => {
+      const localMatches: number[] = [];
+      const textToTranslate = line.replace(/\[([^\]]+)\]/g, (_, chord: string) => {
+        const chordIdx = chords.length;
         chords.push(chord);
-        return `___CHORD_${chords.length - 1}___`;
+        localMatches.push(chordIdx);
+        return `[[C_${chordIdx}]]`;
       });
 
-      // Si la línea solo contenía acordes y espacios, no necesita traducción
-      const cleanText = textToTranslate.replace(/___CHORD_\d+___/g, "").trim();
+      const cleanText = textToTranslate.replace(/\[\[C_\d+\]\]/g, "").trim();
       if (!cleanText || cleanText.length < 2) {
-        translatedLines.push(line);
         continue;
       }
 
-      // Llamar a Google Translate API pública libre
+      translatableIndices.push(idx);
+      preparedLines.push(textToTranslate);
+    }
+
+    if (preparedLines.length === 0) {
+      return { ok: true, text: chordproText };
+    }
+
+    // Enviar las líneas agrupadas por bloques de hasta 2500 caracteres para minimizar llamadas HTTP
+    const BATCH_LIMIT = 2500;
+    const translatedPrepared: string[] = [];
+    let currentBatch: string[] = [];
+    let currentLen = 0;
+
+    const flushBatch = async (batch: string[]) => {
+      if (batch.length === 0) return;
+      const joined = batch.join("\n");
       const res = await fetch(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(textToTranslate)}`,
-        { headers: { "User-Agent": "Mozilla/5.0" } }
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(joined)}`,
+        {
+          headers: { "User-Agent": "Mozilla/5.0" },
+          signal: AbortSignal.timeout(10000),
+        }
       );
 
       if (!res.ok) {
-        translatedLines.push(line);
-        continue;
+        translatedPrepared.push(...batch);
+        return;
       }
 
-      const data = await res.json();
-      let translatedLine = "";
+      const data: unknown = await res.json();
+      let fullTranslated = "";
       if (Array.isArray(data) && Array.isArray(data[0])) {
         for (const item of data[0]) {
-          if (item && item[0]) translatedLine += item[0];
+          if (Array.isArray(item) && typeof item[0] === "string") {
+            fullTranslated += item[0];
+          }
         }
       } else {
-        translatedLine = textToTranslate;
+        fullTranslated = joined;
       }
 
-      // Restaurar los acordes [Acorde] en su lugar original
-      for (let i = 0; i < chords.length; i++) {
-        // En caso de que el traductor haya agregado espacios o modificado la etiqueta
-        const regex = new RegExp(`___\\s*CHORD_\\s*${i}\\s*___`, "gi");
-        translatedLine = translatedLine.replace(regex, `[${chords[i]}]`);
+      const splitLines = fullTranslated.split("\n");
+      for (let i = 0; i < batch.length; i++) {
+        translatedPrepared.push(splitLines[i] ?? batch[i]);
       }
+    };
 
-      translatedLines.push(translatedLine);
+    for (const pl of preparedLines) {
+      if (currentLen + pl.length > BATCH_LIMIT && currentBatch.length > 0) {
+        await flushBatch(currentBatch);
+        currentBatch = [];
+        currentLen = 0;
+      }
+      currentBatch.push(pl);
+      currentLen += pl.length + 1;
+    }
+    await flushBatch(currentBatch);
+
+    const outLines = [...lines];
+    for (let j = 0; j < translatableIndices.length; j++) {
+      const lineIdx = translatableIndices[j];
+      let tLine = translatedPrepared[j] ?? preparedLines[j];
+      tLine = tLine.replace(/\[\[\s*C_\s*(\d+)\s*\]\]/gi, (_, numStr: string) => {
+        const cIdx = Number(numStr);
+        return chords[cIdx] !== undefined ? `[${chords[cIdx]}]` : "";
+      });
+      outLines[lineIdx] = tLine;
     }
 
-    return { ok: true, text: translatedLines.join("\n") };
-  } catch (err: any) {
+    return { ok: true, text: outLines.join("\n") };
+  } catch (err: unknown) {
     console.error("Error al traducir letra:", err);
     return { ok: false, error: "No se pudo completar la traducción en este momento." };
   }

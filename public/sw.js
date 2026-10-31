@@ -24,7 +24,8 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          // Proteger la caché de la aplicación y la caché dedicada de stems de audio en flash
+          if (key !== CACHE_NAME && key !== "tabchurch-audio-stems-v1") {
             return caches.delete(key);
           }
         })

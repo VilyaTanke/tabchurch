@@ -2,18 +2,24 @@
 
 import { useActionState, useEffect, useState } from "react";
 import {
-  ShieldCheck,
   KeyRound,
   UserCheck,
   UserX,
   Pencil,
   Check,
   X,
-  User,
+  Church,
 } from "lucide-react";
 import { resetPassword, toggleUserActive, updateUser } from "@/app/actions";
 import RoleBadge from "@/components/RoleBadge";
 import UserAvatar from "@/components/UserAvatar";
+
+export type AdminChurch = {
+  id: number;
+  name: string;
+  city?: string | null;
+  notes?: string | null;
+};
 
 export type AdminUser = {
   id: number;
@@ -23,14 +29,17 @@ export type AdminUser = {
   role: string;
   active: boolean;
   avatar?: string | null;
+  churchId?: number | null;
+  churchName?: string | null;
 };
 
 type Props = {
   user: AdminUser;
   currentUserId: number;
+  churches?: AdminChurch[];
 };
 
-export default function UserRow({ user, currentUserId }: Props) {
+export default function UserRow({ user, currentUserId, churches = [] }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [state, formAction, pending] = useActionState(updateUser, undefined);
   const isSelf = user.id === currentUserId;
@@ -159,6 +168,25 @@ export default function UserRow({ user, currentUserId }: Props) {
                 </select>
               )}
             </div>
+
+            <div className="field" style={{ gridColumn: "1 / -1" }}>
+              <label htmlFor={`edit-church-${user.id}`} style={{ fontSize: "0.85rem" }}>
+                Iglesia asignada
+              </label>
+              <select
+                id={`edit-church-${user.id}`}
+                name="churchId"
+                className="input"
+                defaultValue={user.churchId ?? ""}
+              >
+                <option value="">(Sin iglesia asignada)</option>
+                {churches.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.city ? `· ${c.city}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {state?.error && (
@@ -213,6 +241,39 @@ export default function UserRow({ user, currentUserId }: Props) {
           <div style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
             <strong>{user.name}</strong> <span className="muted">@{user.username}</span>
             <RoleBadge role={user.role} />
+            {user.churchName ? (
+              <span
+                className="badge"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: "rgba(223, 186, 115, 0.15)",
+                  color: "var(--accent)",
+                  borderColor: "rgba(212, 175, 55, 0.3)",
+                }}
+                title={`Iglesia: ${user.churchName}`}
+              >
+                <Church size={12} />
+                <span>{user.churchName}</span>
+              </span>
+            ) : (
+              <span
+                className="badge"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  background: "rgba(120, 120, 120, 0.1)",
+                  color: "var(--muted)",
+                  opacity: 0.85,
+                }}
+                title="Sin iglesia asignada"
+              >
+                <Church size={12} />
+                <span>Sin iglesia</span>
+              </span>
+            )}
             {!user.active && <span className="badge off">desactivado</span>}
           </div>
           {user.email && (

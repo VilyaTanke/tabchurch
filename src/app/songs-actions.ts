@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
@@ -98,6 +98,39 @@ export async function deleteSong(form: FormData) {
   redirect("/canciones");
 }
 
+export async function deleteMultipleSongs(
+  ids: number[]
+): Promise<{ ok: boolean; count?: number; error?: string }> {
+  const user = await requireUser();
+  if (!canManageSongs(user)) {
+    return {
+      ok: false,
+      error: "Solo los editores o administradores pueden eliminar canciones.",
+    };
+  }
+
+  const validIds = ids.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (validIds.length === 0) {
+    return { ok: false, error: "No se seleccionó ninguna canción para eliminar." };
+  }
+
+  try {
+    db.delete(schema.songs)
+      .where(inArray(schema.songs.id, validIds))
+      .run();
+
+    revalidatePath("/canciones");
+    revalidatePath("/listas");
+    return { ok: true, count: validIds.length };
+  } catch (err: unknown) {
+    console.error("Error al eliminar canciones seleccionadas:", err);
+    return {
+      ok: false,
+      error: (err as Error)?.message || "Error al eliminar las canciones seleccionadas.",
+    };
+  }
+}
+
 export async function importSongFromUrl(url: string) {
   const user = await requireUser();
   if (!canManageSongs(user)) {
@@ -107,7 +140,7 @@ export async function importSongFromUrl(url: string) {
   try {
     const data = await scrapeSongFromUrl(url);
     return { ok: true, song: data };
-  } catch (err: any) {
-    return { ok: false, error: err.message || "Error al importar el cifrado" };
+  } catch (err: unknown) {
+    return { ok: false, error: (err as Error)?.message || "Error al importar el cifrado" };
   }
 }

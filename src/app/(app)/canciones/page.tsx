@@ -1,20 +1,38 @@
 import Link from "next/link";
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { desc, like, or, sql } from "drizzle-orm";
 import {
-  Plus,
   Clock,
   User,
   Search,
   X,
   ChevronLeft,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
+import SongLibraryManager from "@/components/SongLibraryManager";
 
 export const metadata = { title: "Canciones · Tab-NuevaVida" };
 
 const PAGE_SIZE = 20;
+
+function getPaginationWindow(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "ellipsis")[] = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+
+  if (left > 2) pages.push("ellipsis");
+  for (let p = left; p <= right; p++) {
+    pages.push(p);
+  }
+  if (right < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
 
 export default async function SongsPage({
   searchParams,
@@ -55,108 +73,76 @@ export default async function SongsPage({
     return qs ? `/canciones?${qs}` : "/canciones";
   };
 
+  const pageItems = getPaginationWindow(currentPage, totalPages);
+
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <div className="grow">
-          <h1>Biblioteca de Canciones</h1>
-          <p className="muted" style={{ fontSize: "0.85rem" }}>
-            {totalSongs} {totalSongs === 1 ? "canción" : "canciones"} en total
-            {totalPages > 1 ? ` · Página ${currentPage} de ${totalPages}` : ""}
-          </p>
-        </div>
-        {canManageSongs(user) && (
-          <Link
-            href="/canciones/nueva"
-            className="btn"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-          >
-            <Plus size={16} />
-            <span>Nueva</span>
-          </Link>
-        )}
-      </div>
-
-      {/* Pestañas de Vista */}
-      <div className="row" style={{ gap: "0.5rem" }}>
-        <Link
-          href="/canciones"
-          className="btn small"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-        >
-          <Clock size={14} />
-          <span>Últimas agregadas</span>
-        </Link>
-        <Link
-          href="/canciones/artistas"
-          className="btn ghost small"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-        >
-          <User size={14} />
-          <span>Por Artista</span>
-        </Link>
-      </div>
-
-      <form className="row" role="search">
-        <input
-          name="q"
-          defaultValue={q}
-          className="input grow"
-          placeholder="Buscar por título o artista…"
-          aria-label="Buscar canciones"
-        />
-        <button
-          className="btn ghost"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-        >
-          <Search size={14} />
-          <span>Buscar</span>
-        </button>
-        {q && (
+      <SongLibraryManager
+        songs={songs}
+        canManage={canManageSongs(user)}
+        totalSongs={totalSongs}
+        currentPage={currentPage}
+        totalPages={totalPages}
+      >
+        {/* Pestañas de Vista */}
+        <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
           <Link
             href="/canciones"
+            className="btn small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Clock size={14} />
+            <span>Últimas agregadas</span>
+          </Link>
+          <Link
+            href="/canciones/artistas"
             className="btn ghost small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <User size={14} />
+            <span>Por Artista</span>
+          </Link>
+          <Link
+            href="/galeria"
+            className="btn ghost small"
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <SlidersHorizontal size={14} style={{ color: "var(--accent)" }} />
+            <span>Zamar</span>
+          </Link>
+        </div>
+
+        <form className="row" role="search">
+          <input
+            name="q"
+            defaultValue={q}
+            className="input grow"
+            placeholder="Buscar por título o artista…"
+            aria-label="Buscar canciones"
+          />
+          <button
+            className="btn ghost"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
           >
-            <X size={13} />
-            <span>Limpiar filtro</span>
-          </Link>
-        )}
-      </form>
-
-      {songs.length === 0 ? (
-        <div className="card">
-          <p className="muted">{q ? "Sin resultados para tu búsqueda." : "Aún no tienes canciones. ¡Crea la primera!"}</p>
-        </div>
-      ) : (
-        <div className="grid two">
-          {songs.map((s) => (
-            <Link key={s.id} href={`/canciones/${s.id}`} className="card song-card">
-              <div className="row">
-                <strong className="grow">{s.title}</strong>
-                {(s.currentKey || s.originalKey) && (
-                  <span
-                    className="badge admin"
-                    title={s.originalKey && s.currentKey && s.originalKey !== s.currentKey ? `Tono original: ${s.originalKey}` : undefined}
-                  >
-                    {s.currentKey || s.originalKey}
-                    {s.originalKey && s.currentKey && s.originalKey !== s.currentKey && (
-                      <span style={{ opacity: 0.7, fontSize: "0.75em", marginLeft: "4px" }}>(orig. {s.originalKey})</span>
-                    )}
-                  </span>
-                )}
-              </div>
-              <div className="muted" style={{ fontSize: "0.9rem" }}>
-                {s.artist || "Sin artista"}{s.tempo ? ` · ${s.tempo} BPM` : ""}
-              </div>
+            <Search size={14} />
+            <span>Buscar</span>
+          </button>
+          {q && (
+            <Link
+              href="/canciones"
+              className="btn ghost small"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+            >
+              <X size={13} />
+              <span>Limpiar filtro</span>
             </Link>
-          ))}
-        </div>
-      )}
+          )}
+        </form>
+      </SongLibraryManager>
 
-      {/* Controles de paginación */}
+      {/* Controles de paginación con ventana y puntos suspensivos */}
       {totalPages > 1 && (
-        <div className="row" style={{ justifyContent: "center", gap: "0.5rem", marginTop: "1rem" }}>
+        <div className="row" style={{ justifyContent: "center", gap: "0.5rem", marginTop: "1rem", flexWrap: "wrap" }}>
           {currentPage > 1 ? (
             <Link
               href={buildPageUrl(currentPage - 1)}
@@ -177,17 +163,28 @@ export default async function SongsPage({
             </button>
           )}
 
-          <div className="row" style={{ gap: "0.35rem" }}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-              const isCurrent = p === currentPage;
+          <div className="row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
+            {pageItems.map((item, idx) => {
+              if (item === "ellipsis") {
+                return (
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className="muted"
+                    style={{ padding: "0 0.35rem", userSelect: "none" }}
+                  >
+                    …
+                  </span>
+                );
+              }
+              const isCurrent = item === currentPage;
               return (
                 <Link
-                  key={p}
-                  href={buildPageUrl(p)}
+                  key={item}
+                  href={buildPageUrl(item)}
                   className={`btn small ${isCurrent ? "" : "ghost"}`}
                   style={{ minWidth: "38px", padding: "0 0.6rem", textAlign: "center" }}
                 >
-                  {p}
+                  {item}
                 </Link>
               );
             })}

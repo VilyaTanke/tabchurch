@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { UploadCloud, X, Sparkles, FileAudio, Music } from "lucide-react";
 import { KEYS } from "@/lib/chordpro";
 import { DEFAULT_STEM_MODEL, STEM_MODELS } from "@/lib/stems";
+import type { GalleryTrackItem } from "@/components/TrackCard";
 
 interface SongOption {
   id: number;
@@ -18,15 +19,18 @@ export default function AudioUploadModal({
   songs,
   isOpen,
   onClose,
+  onTrackUploaded,
 }: {
   songs: SongOption[];
   isOpen: boolean;
   onClose: () => void;
+  onTrackUploaded?: (track: GalleryTrackItem) => void;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [detectedDuration, setDetectedDuration] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [selectedSongId, setSelectedSongId] = useState<string>("");
@@ -46,7 +50,27 @@ export default function AudioUploadModal({
     if (!file) return;
 
     setSelectedFile(file);
+    setDetectedDuration(null);
     setErrorMsg(null);
+
+    // Detectar duración del archivo automáticamente en el navegador
+    try {
+      const objUrl = URL.createObjectURL(file);
+      const tempAudio = new Audio();
+      tempAudio.preload = "metadata";
+      tempAudio.onloadedmetadata = () => {
+        if (Number.isFinite(tempAudio.duration) && tempAudio.duration > 0) {
+          setDetectedDuration(Math.round(tempAudio.duration * 10) / 10);
+        }
+        URL.revokeObjectURL(objUrl);
+      };
+      tempAudio.onerror = () => {
+        URL.revokeObjectURL(objUrl);
+      };
+      tempAudio.src = objUrl;
+    } catch {
+      // Ignorar si falla la lectura preliminar de metadatos
+    }
 
     // Sugerir título limpiando la extensión
     const cleanName = file.name.replace(/\.[^/.]+$/, "");
@@ -91,6 +115,7 @@ export default function AudioUploadModal({
       if (selectedSongId) formData.append("songId", selectedSongId);
       if (musicalKey) formData.append("musicalKey", musicalKey);
       if (bpm) formData.append("bpm", bpm);
+      if (detectedDuration) formData.append("durationSec", String(detectedDuration));
       formData.append("autoSeparate", String(autoSeparate));
       formData.append("model", stemModel);
 
@@ -124,8 +149,10 @@ export default function AudioUploadModal({
       setUploadProgress(100);
       onClose();
       router.refresh();
-      // Redirigir directamente al nuevo estudio
-      if (data.track?.id) {
+      if (onTrackUploaded && data.track) {
+        onTrackUploaded(data.track);
+      } else if (data.track?.id) {
+        // Redirigir directamente al nuevo estudio si no hay callback personalizado
         router.push(`/galeria/${data.track.id}/estudio`);
       }
     } catch (err: unknown) {
@@ -145,7 +172,7 @@ export default function AudioUploadModal({
         <div className="row" style={{ justifyContent: "space-between", marginBottom: "1rem" }}>
           <div className="row" style={{ gap: "0.5rem" }}>
             <FileAudio size={22} style={{ color: "var(--accent)" }} />
-            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Subir Audio a la Galería</h2>
+            <h2 style={{ margin: 0, fontSize: "1.25rem" }}>Subir Audio a Zamar</h2>
           </div>
           <button
             type="button"
@@ -321,7 +348,7 @@ export default function AudioUploadModal({
                   )}
                 </div>
                 <p className="muted" style={{ fontSize: "0.78rem", margin: 0, lineHeight: 1.35 }}>
-                  Sube el audio al instante para reproducir y cambiar tono. Podrás separar los stems en cualquier momento desde el <strong>Estudio</strong>.
+                  Sube el audio al instante para reproducir y cambiar tono. Podrás separar los stems en cualquier momento desde el <strong>Estudio Z</strong>.
                 </p>
               </div>
 

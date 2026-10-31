@@ -64,8 +64,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUser();
-  if (!user || !canManageSongs(user)) {
-    return NextResponse.json({ error: "Permiso denegado." }, { status: 403 });
+  if (!user) {
+    return NextResponse.json({ error: "No autenticado." }, { status: 401 });
   }
 
   const { id } = await params;
@@ -81,15 +81,33 @@ export async function PATCH(
 
   try {
     const body = await req.json();
+
+    // Permitir que cualquier usuario autenticado registre automáticamente la duración real si faltaba
+    const isOnlyDurationUpdate =
+      Object.keys(body).length === 1 &&
+      typeof body.durationSec === "number" &&
+      Number.isFinite(body.durationSec) &&
+      body.durationSec > 0;
+
+    if (!isOnlyDurationUpdate && !canManageSongs(user)) {
+      return NextResponse.json({ error: "Permiso denegado." }, { status: 403 });
+    }
+
     const updateData: Partial<typeof schema.tracks.$inferInsert> = {
       updatedAt: Math.floor(Date.now() / 1000),
     };
 
-    if (typeof body.title === "string" && body.title.trim()) updateData.title = body.title.trim();
-    if ("artist" in body) updateData.artist = body.artist ? String(body.artist).trim() : null;
-    if ("musicalKey" in body) updateData.musicalKey = body.musicalKey ? String(body.musicalKey).trim() : null;
-    if ("bpm" in body) updateData.bpm = body.bpm ? Number(body.bpm) || null : null;
-    if ("songId" in body) updateData.songId = body.songId ? Number(body.songId) || null : null;
+    if (typeof body.durationSec === "number" && Number.isFinite(body.durationSec) && body.durationSec > 0) {
+      updateData.durationSec = body.durationSec;
+    }
+
+    if (canManageSongs(user)) {
+      if (typeof body.title === "string" && body.title.trim()) updateData.title = body.title.trim();
+      if ("artist" in body) updateData.artist = body.artist ? String(body.artist).trim() : null;
+      if ("musicalKey" in body) updateData.musicalKey = body.musicalKey ? String(body.musicalKey).trim() : null;
+      if ("bpm" in body) updateData.bpm = body.bpm ? Number(body.bpm) || null : null;
+      if ("songId" in body) updateData.songId = body.songId ? Number(body.songId) || null : null;
+    }
 
     db.update(schema.tracks).set(updateData).where(eq(schema.tracks.id, trackId)).run();
 

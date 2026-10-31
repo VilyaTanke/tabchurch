@@ -1,4 +1,6 @@
 import "server-only";
+import dns from "node:dns/promises";
+import net from "node:net";
 import * as cheerio from "cheerio";
 import { convertChordsOverLyrics, isChord } from "./chordpro";
 
@@ -9,6 +11,7 @@ export type ScrapedSong = {
   contentChordpro: string;
 };
 
+<<<<<<< HEAD
 /**
  * Reemplaza los marcadores \uE000acorde\uE001 por [acorde] preservando
  * la columna exacta de cada acorde respecto a la letra inferior.
@@ -49,6 +52,85 @@ function cleanScrapedText(text: string): string {
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+=======
+/** Verifica si una dirección IPv4 o IPv6 pertenece a rangos privados, loopback o link-local (protección SSRF). */
+function isPrivateOrReservedIp(ip: string): boolean {
+  const normalized = ip.toLowerCase().trim();
+  if (normalized === "::1" || normalized === "::" || normalized === "0.0.0.0") return true;
+
+  const v4Mapped = normalized.startsWith("::ffff:") ? normalized.slice(7) : normalized;
+
+  if (net.isIPv4(v4Mapped)) {
+    const parts = v4Mapped.split(".").map(Number);
+    const [a, b] = parts;
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+
+  if (net.isIPv6(normalized)) {
+    if (
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80") ||
+      normalized.startsWith("ff")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** Valida que la URL sea HTTP/HTTPS pública y no apunte a servicios internos (anti-SSRF). */
+async function validatePublicUrl(rawUrl: string): Promise<URL> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("La URL proporcionada no es válida.");
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Solo se permiten enlaces con protocolo HTTP o HTTPS.");
+  }
+
+  const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    !hostname ||
+    hostname === "localhost" ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".localhost")
+  ) {
+    throw new Error("No se permiten direcciones locales o internas.");
+  }
+
+  if (net.isIP(hostname)) {
+    if (isPrivateOrReservedIp(hostname)) {
+      throw new Error("No se permiten direcciones IP privadas o reservadas.");
+    }
+    return parsed;
+  }
+
+  const records = await dns.lookup(hostname, { all: true }).catch(() => []);
+  if (!records.length) {
+    throw new Error("No se pudo resolver el dominio del enlace.");
+  }
+  for (const rec of records) {
+    if (isPrivateOrReservedIp(rec.address)) {
+      throw new Error("El dominio apunta a una dirección de red interna no permitida.");
+    }
+  }
+
+  return parsed;
+>>>>>>> 2772d4852ec7315e4b4a347c4e117335c14dd744
 }
 
 const BROWSER_HEADERS: Record<string, string> = {
@@ -221,11 +303,16 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
   // Convertir acordes de CifraClub: **C** -> marcador para preservar columnas
   body = body.replace(/\*\*([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\*\*/g, "\uE000$1\uE001");
 
+<<<<<<< HEAD
   // Convertir enlaces de acordes de LaCuerda: [D](http...) -> marcador para preservar columnas
   body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\]\([^\)]+\)/g, "\uE000$1\uE001");
+=======
+  // Convertir enlaces de acordes de LaCuerda: [D](http...) -> [D]
+  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#]*)?)\]\([^)]+\)/g, "[$1]");
+>>>>>>> 2772d4852ec7315e4b4a347c4e117335c14dd744
 
   // Limpiar imágenes markdown y enlaces residuales
-  body = body.replace(/!\[[^\]]*\]\([^\)]+\)/g, "");
+  body = body.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
   body = body.replace(/^\s*(?:Key|Tono):\s*[A-G][#b]?m?\s*/im, "");
 
   let contentChordpro = cleanScrapedText(body);
@@ -254,15 +341,16 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
 
 /**
  * Extrae y convierte una canción de sitios como CifraClub o LaCuerda
- * Con tolerancia a fallos y fallback anti-bot
+ * Con validación anti-SSRF, tolerancia a fallos y fallback anti-bot
  */
 export async function scrapeSongFromUrl(url: string): Promise<ScrapedSong> {
-  const parsedUrl = new URL(url);
+  const parsedUrl = await validatePublicUrl(url);
   let useFallback = false;
 
   try {
     const response = await fetch(parsedUrl.toString(), {
       headers: BROWSER_HEADERS,
+      redirect: "follow",
       signal: AbortSignal.timeout(6000),
     });
 

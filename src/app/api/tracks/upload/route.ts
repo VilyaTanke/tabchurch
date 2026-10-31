@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
     const musicalKey = (formData.get("musicalKey") as string)?.trim() || null;
     const bpmRaw = formData.get("bpm");
     const bpm = bpmRaw ? Number(bpmRaw) || null : null;
+    const durationRaw = formData.get("durationSec");
+    const durationSec = durationRaw && Number(durationRaw) > 0 ? Number(durationRaw) : null;
     const autoSeparate = formData.get("autoSeparate") === "true";
     const requestedModel = formData.get("model") as string;
     const stemModel = isStemModel(requestedModel) ? requestedModel : DEFAULT_STEM_MODEL;
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validación de tamaño (80 MB máximo)
-    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+    if (file.size <= 0 || file.size > MAX_UPLOAD_MB * 1024 * 1024) {
       return NextResponse.json(
         { error: `El archivo supera el límite máximo de ${MAX_UPLOAD_MB} MB.` },
         { status: 400 }
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
         originalName,
         mimeType: file.type || "audio/mpeg",
         sizeBytes: file.size,
+        durationSec,
         musicalKey,
         bpm,
         stemsStatus: "none",

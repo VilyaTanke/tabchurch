@@ -14,14 +14,26 @@ if (!fs.existsSync(seedPath)) {
 }
 
 const db = new Database(dbPath);
-const sql = fs.readFileSync(seedPath, "utf-8");
+let sql = fs.readFileSync(seedPath, "utf-8");
 
-console.log("Importando datos desde scripts/seed.sql...");
+// Protección: filtrar cualquier sentencia antigua que borre o sobrescriba la tabla users
+sql = sql
+  .split(/\r?\n/)
+  .filter((line) => {
+    const trimmed = line.trim().toUpperCase();
+    if (trimmed.startsWith("DELETE FROM USERS")) return false;
+    if (trimmed.startsWith("INSERT OR REPLACE INTO USERS")) return false;
+    if (trimmed.startsWith("INSERT INTO USERS")) return false;
+    return true;
+  })
+  .join("\n");
+
+console.log("Importando catálogo desde scripts/seed.sql (preservando cuentas de usuario existentes)...");
 db.exec(sql);
 
 const songs = db.prepare("SELECT count(*) as count FROM songs").get();
 const users = db.prepare("SELECT count(*) as count FROM users").get();
-console.log(`✅ Base de datos actualizada con éxito:`);
+console.log(`✅ Base de datos sincronizada con éxito:`);
 console.log(`- Canciones: ${songs.count}`);
-console.log(`- Usuarios: ${users.count}`);
+console.log(`- Usuarios conservados: ${users.count}`);
 db.close();

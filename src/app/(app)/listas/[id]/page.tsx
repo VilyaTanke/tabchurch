@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, desc, isNotNull } from "drizzle-orm";
 import { ArrowLeft, Mic2, Trash2 } from "lucide-react";
 import { db, schema } from "@/db";
 import { requireUser } from "@/lib/auth";
-import { deleteSetlist, updateSetlist } from "@/app/setlists-actions";
+import { deleteSetlist } from "@/app/setlists-actions";
 import SetlistEditor from "@/components/SetlistEditor";
 import PrintButton from "@/components/PrintButton";
 import ReadingScaleControl from "@/components/ReadingScaleControl";
-import { getSetlistFor, getSetlistItems } from "@/lib/setlists";
+import { canUserEditSetlist, getSetlistFor, getSetlistItems } from "@/lib/setlists";
 
 export default async function SetlistDetailPage({
   params,
@@ -18,9 +18,10 @@ export default async function SetlistDetailPage({
   const user = await requireUser();
   const { id } = await params;
   const setlistId = Number(id);
-  const list = getSetlistFor(user.id, setlistId);
+  const list = getSetlistFor(user.id, setlistId, user.role === "admin");
   if (!list) notFound();
 
+  const canEdit = canUserEditSetlist(user, list);
   const items = getSetlistItems(setlistId);
   const library = db
     .select({
@@ -32,6 +33,30 @@ export default async function SetlistDetailPage({
     .orderBy(asc(schema.songs.title))
     .all();
 
+  // Obtener pistas de audio de Zamar vinculadas a canciones
+  const linkedTracks = db
+    .select({
+      id: schema.tracks.id,
+      songId: schema.tracks.songId,
+      title: schema.tracks.title,
+      durationSec: schema.tracks.durationSec,
+    })
+    .from(schema.tracks)
+    .where(isNotNull(schema.tracks.songId))
+    .orderBy(desc(schema.tracks.createdAt))
+    .all();
+
+  const tracksBySongId: Record<number, { id: number; title: string; durationSec: number | null }> = {};
+  for (const t of linkedTracks) {
+    if (t.songId && !tracksBySongId[t.songId]) {
+      tracksBySongId[t.songId] = {
+        id: t.id,
+        title: t.title,
+        durationSec: t.durationSec,
+      };
+    }
+  }
+
   const formattedItems = items.map((it) => ({
     id: it.id,
     songId: it.song.id,
@@ -41,6 +66,7 @@ export default async function SetlistDetailPage({
     keyOverride: it.keyOverride,
     notes: it.itemNotes || "",
     twoColumns: Boolean(it.twoColumns),
+    audioTrack: tracksBySongId[it.song.id] || null,
   }));
 
   return (
@@ -88,16 +114,18 @@ export default async function SetlistDetailPage({
             </>
           )}
           <ReadingScaleControl />
-          <form action={deleteSetlist}>
-            <input type="hidden" name="id" value={list.id} />
-            <button
-              className="btn danger small"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-            >
-              <Trash2 size={13} />
-              <span>Eliminar</span>
-            </button>
-          </form>
+          {canEdit && (
+            <form action={deleteSetlist}>
+              <input type="hidden" name="id" value={list.id} />
+              <button
+                className="btn danger small"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+              >
+                <Trash2 size={13} />
+                <span>Eliminar</span>
+              </button>
+            </form>
+          )}
         </div>
       </div>
 
@@ -105,6 +133,8 @@ export default async function SetlistDetailPage({
         setlistId={list.id}
         initial={formattedItems}
         library={library}
+        tracksBySongId={tracksBySongId}
+        canEdit={canEdit}
       />
     </div>
   );
