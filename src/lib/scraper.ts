@@ -11,7 +11,6 @@ export type ScrapedSong = {
   contentChordpro: string;
 };
 
-<<<<<<< HEAD
 /**
  * Reemplaza los marcadores \uE000acorde\uE001 por [acorde] preservando
  * la columna exacta de cada acorde respecto a la letra inferior.
@@ -52,7 +51,8 @@ function cleanScrapedText(text: string): string {
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-=======
+}
+
 /** Verifica si una dirección IPv4 o IPv6 pertenece a rangos privados, loopback o link-local (protección SSRF). */
 function isPrivateOrReservedIp(ip: string): boolean {
   const normalized = ip.toLowerCase().trim();
@@ -130,7 +130,6 @@ async function validatePublicUrl(rawUrl: string): Promise<URL> {
   }
 
   return parsed;
->>>>>>> 2772d4852ec7315e4b4a347c4e117335c14dd744
 }
 
 const BROWSER_HEADERS: Record<string, string> = {
@@ -303,13 +302,9 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
   // Convertir acordes de CifraClub: **C** -> marcador para preservar columnas
   body = body.replace(/\*\*([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\*\*/g, "\uE000$1\uE001");
 
-<<<<<<< HEAD
   // Convertir enlaces de acordes de LaCuerda: [D](http...) -> marcador para preservar columnas
-  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\]\([^\)]+\)/g, "\uE000$1\uE001");
-=======
-  // Convertir enlaces de acordes de LaCuerda: [D](http...) -> [D]
-  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#]*)?)\]\([^)]+\)/g, "[$1]");
->>>>>>> 2772d4852ec7315e4b4a347c4e117335c14dd744
+  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\]\([^)]+\)/g, "\uE000$1\uE001");
+
 
   // Limpiar imágenes markdown y enlaces residuales
   body = body.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
