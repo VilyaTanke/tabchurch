@@ -7,3 +7,4 @@ export default async function ImportArtistPage() {
   await requireSongEditor();
   return <ArtistImporter />;
 }
+
