@@ -11,6 +11,16 @@ export type ScrapedSong = {
   contentChordpro: string;
 };
 
+export type ArtistSongItem = {
+  title: string;
+  url: string;
+};
+
+export type ArtistScrapedCatalog = {
+  artist: string;
+  songs: ArtistSongItem[];
+};
+
 /**
  * Reemplaza los marcadores \uE000acorde\uE001 por [acorde] preservando
  * la columna exacta de cada acorde respecto a la letra inferior.
@@ -401,4 +411,164 @@ export async function scrapeSongFromUrl(url: string): Promise<ScrapedSong> {
   throw new Error(
     "No se pudo acceder a la página web debido a la protección anti-bot del sitio origen. Intenta copiar y pegar la canción manualmente."
   );
+}
+
+/**
+ * Extrae la lista completa de canciones de un artista desde CifraClub o LaCuerda
+ */
+export async function scrapeArtistSongs(artistUrl: string): Promise<ArtistScrapedCatalog> {
+  const parsedUrl = await validatePublicUrl(artistUrl);
+  const hostname = parsedUrl.hostname.toLowerCase();
+
+  async function fetchHtml(urlStr: string): Promise<string> {
+    try {
+      const res = await fetch(urlStr, {
+        headers: BROWSER_HEADERS,
+        redirect: "follow",
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.ok) return await res.text();
+    } catch {
+      // Fallback a Jina
+    }
+
+    try {
+      const jinaRes = await fetch(`https://r.jina.ai/${urlStr}`, {
+        headers: { "X-Return-Format": "html", "X-No-Cache": "true" },
+        signal: AbortSignal.timeout(15000),
+      });
+      if (jinaRes.ok) return await jinaRes.text();
+    } catch {
+      // Fallback fallo
+    }
+
+    throw new Error(`No se pudo obtener la página del artista (${urlStr}).`);
+  }
+
+  if (hostname.includes("cifraclub.com")) {
+    const html = await fetchHtml(parsedUrl.toString());
+    const $ = cheerio.load(html);
+
+    let artist = $("h1").first().text().trim() || $('meta[property="og:title"]').attr("content") || "";
+    artist = artist.replace(/\s*cifras\s*$/i, "").trim() || "Artista";
+
+    const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+    const artistSlug = pathParts[0] || "";
+    const artistPath = `/${artistSlug}/`;
+
+    const songMap = new Map<string, string>();
+
+    // 1. Explorar páginas ordenadas alfabéticamente si CifraClub tiene el botón /explorar/
+    let exploreLink = $('a[href*="/explorar/musicas/?artist="]').attr("href") || "";
+    if (exploreLink) {
+      if (!exploreLink.startsWith("http")) {
+        exploreLink = `https://${hostname}${exploreLink.startsWith("/") ? "" : "/"}${exploreLink}`;
+      }
+      const expUrl = new URL(exploreLink);
+      expUrl.searchParams.set("order", "alphabetical");
+
+      for (let page = 1; page <= 8; page++) {
+        expUrl.searchParams.set("page", String(page));
+        try {
+          const pageHtml = await fetchHtml(expUrl.toString());
+          const $p = cheerio.load(pageHtml);
+          let pageCount = 0;
+          $p(`a[href*="/${artistSlug}/"]`).each((_, el) => {
+            const href = $p(el).attr("href");
+            if (!href || href === artistPath || href.includes("?")) return;
+            const parts = href.split("/").filter(Boolean);
+            if (
+              parts.length === 2 &&
+              parts[0] === artistSlug &&
+              !["discografia", "fotos", "playlists", "albuns", "videoaulas", "letra"].includes(parts[1])
+            ) {
+              let title =
+                $p(el).find(".primaryLabel span, .primaryLabel").first().text().trim() ||
+                $p(el).text().trim();
+              title = title.replace(/^\d+\s*/, "").replace(/Opções$/i, "").trim();
+              if (title && !title.toLowerCase().startsWith("letra") && !title.toLowerCase().startsWith("cifra")) {
+                const fullSongUrl = `https://${hostname}/${artistSlug}/${parts[1]}/`;
+                if (!songMap.has(fullSongUrl)) {
+                  songMap.set(fullSongUrl, title);
+                  pageCount++;
+                }
+              }
+            }
+          });
+          if (pageCount === 0) break;
+        } catch {
+          break;
+        }
+      }
+    }
+
+    // 2. Extraer también de la página principal del artista
+    $(`a[href*="/${artistSlug}/"]`).each((_, el) => {
+      const href = $(el).attr("href");
+      if (!href || href === artistPath || href.includes("?")) return;
+      const parts = href.split("/").filter(Boolean);
+      if (
+        parts.length === 2 &&
+        parts[0] === artistSlug &&
+        !["discografia", "fotos", "playlists", "albuns", "videoaulas", "letra"].includes(parts[1])
+      ) {
+        let title =
+          $(el).find(".primaryLabel span, .primaryLabel").first().text().trim() ||
+          $(el).text().trim();
+        title = title.replace(/^\d+\s*/, "").replace(/Opções$/i, "").trim();
+        if (title && !title.toLowerCase().startsWith("letra") && !title.toLowerCase().startsWith("cifra")) {
+          const fullSongUrl = `https://${hostname}/${artistSlug}/${parts[1]}/`;
+          if (!songMap.has(fullSongUrl)) {
+            songMap.set(fullSongUrl, title);
+          }
+        }
+      }
+    });
+
+    const songs: ArtistSongItem[] = Array.from(songMap.entries()).map(([url, title]) => ({ title, url }));
+    return { artist, songs };
+  }
+
+  if (hostname.includes("lacuerda.net")) {
+    const html = await fetchHtml(parsedUrl.toString());
+    const $ = cheerio.load(html);
+
+    let artist = $("h1").first().text().trim() || $('meta[property="og:title"]').attr("content") || "";
+    artist = artist.replace(/letras.*$/i, "").replace(/acordes.*$/i, "").trim() || "Artista";
+
+    const songMap = new Map<string, string>();
+    const baseUrl = parsedUrl.origin;
+    const currentPath = parsedUrl.pathname.endsWith("/") ? parsedUrl.pathname : parsedUrl.pathname + "/";
+
+    $("a").each((_, el) => {
+      const href = $(el).attr("href");
+      let title = $(el).text().trim();
+      if (!href || !title || href.startsWith("#") || href.includes("javascript")) return;
+
+      if (href.startsWith("/tabs/") && href.split("/").filter(Boolean).length <= 2) return;
+      if (title.toLowerCase() === "acordes de guitarra" || title.toLowerCase() === "letras") return;
+
+      title = title.replace(/\s+acordes\s*$/i, "").replace(/\s+tab\s*$/i, "").trim();
+      if (!title || title.length <= 1) return;
+
+      let fullUrl = "";
+      if (href.startsWith("http")) {
+        if (!href.includes(parsedUrl.pathname)) return;
+        fullUrl = href;
+      } else if (href.startsWith("/")) {
+        fullUrl = `${baseUrl}${href}`;
+      } else {
+        fullUrl = `${baseUrl}${currentPath}${href}`;
+      }
+
+      if (!fullUrl.endsWith(currentPath) && !songMap.has(fullUrl)) {
+        songMap.set(fullUrl, title);
+      }
+    });
+
+    const songs: ArtistSongItem[] = Array.from(songMap.entries()).map(([url, title]) => ({ title, url }));
+    return { artist, songs };
+  }
+
+  throw new Error("Actualmente solo se admite importar catálogos de artistas desde CifraClub o LaCuerda.");
 }

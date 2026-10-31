@@ -144,3 +144,129 @@ export async function importSongFromUrl(url: string) {
     return { ok: false, error: (err as Error)?.message || "Error al importar el cifrado" };
   }
 }
+
+export type ScrapedArtistSongView = {
+  title: string;
+  url: string;
+  alreadyExists: boolean;
+  existingId?: number;
+};
+
+export async function getArtistSongsAction(url: string): Promise<{
+  ok: boolean;
+  artist?: string;
+  songs?: ScrapedArtistSongView[];
+  error?: string;
+}> {
+  const user = await requireUser();
+  if (!canManageSongs(user)) {
+    return { ok: false, error: "Solo los editores o administradores pueden importar canciones" };
+  }
+
+  try {
+    const { scrapeArtistSongs } = await import("@/lib/scraper");
+    const catalog = await scrapeArtistSongs(url);
+
+    // Obtener todas las canciones existentes para comparar
+    const existingSongs = db
+      .select({ id: schema.songs.id, title: schema.songs.title, artist: schema.songs.artist })
+      .from(schema.songs)
+      .all();
+
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "")
+        .trim();
+
+    const songsWithStatus: ScrapedArtistSongView[] = catalog.songs.map((song) => {
+      const normTitle = normalize(song.title);
+      const normArtist = normalize(catalog.artist);
+
+      const match = existingSongs.find((existing) => {
+        const existNormTitle = normalize(existing.title);
+        const existNormArtist = normalize(existing.artist || "");
+        if (existNormTitle === normTitle) {
+          if (!existNormArtist || !normArtist) return true;
+          return existNormArtist.includes(normArtist) || normArtist.includes(existNormArtist);
+        }
+        return false;
+      });
+
+      return {
+        title: song.title,
+        url: song.url,
+        alreadyExists: Boolean(match),
+        existingId: match?.id,
+      };
+    });
+
+    return {
+      ok: true,
+      artist: catalog.artist,
+      songs: songsWithStatus,
+    };
+  } catch (err: unknown) {
+    return { ok: false, error: (err as Error)?.message || "Error al escanear el artista." };
+  }
+}
+
+export async function importSingleArtistSongAction(
+  songUrl: string,
+  artistFallback: string
+): Promise<{ ok: boolean; title?: string; songId?: number; skipped?: boolean; error?: string }> {
+  const user = await requireUser();
+  if (!canManageSongs(user)) {
+    return { ok: false, error: "Solo los editores o administradores pueden importar canciones" };
+  }
+
+  try {
+    const { scrapeSongFromUrl } = await import("@/lib/scraper");
+    const songData = await scrapeSongFromUrl(songUrl);
+
+    // Verificar si ya existe en la base de datos
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "")
+        .trim();
+
+    const normTitle = normalize(songData.title);
+    const existing = db
+      .select({ id: schema.songs.id, title: schema.songs.title })
+      .from(schema.songs)
+      .all()
+      .find((s) => normalize(s.title) === normTitle);
+
+    if (existing) {
+      return { ok: true, skipped: true, title: songData.title, songId: existing.id };
+    }
+
+    const inserted = db
+      .insert(schema.songs)
+      .values({
+        ownerId: user.id,
+        title: songData.title,
+        artist: songData.artist || artistFallback || null,
+        originalKey: songData.originalKey,
+        currentKey: songData.originalKey,
+        contentChordpro: songData.contentChordpro,
+      })
+      .returning({ id: schema.songs.id })
+      .get();
+
+    return { ok: true, title: songData.title, songId: inserted.id };
+  } catch (err: unknown) {
+    return { ok: false, error: (err as Error)?.message || "Error al importar canción" };
+  }
+}
+
+export async function finishArtistImportAction() {
+  revalidatePath("/canciones");
+  revalidatePath("/canciones/artistas");
+  return { ok: true };
+}

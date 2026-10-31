@@ -7,6 +7,7 @@ import {
   Search,
   X,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { db, schema } from "@/db";
 import { canManageSongs, requireUser } from "@/lib/auth";
@@ -62,14 +63,24 @@ export default async function ArtistsPage({
           </p>
         </div>
         {canManageSongs(user) && (
-          <Link
-            href="/canciones/nueva"
-            className="btn"
-            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-          >
-            <Plus size={16} />
-            <span>Nueva</span>
-          </Link>
+          <div className="row" style={{ gap: "0.5rem" }}>
+            <Link
+              href="/canciones/importar-artista"
+              className="btn alt"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <Download size={16} />
+              <span>Importar artista</span>
+            </Link>
+            <Link
+              href="/canciones/nueva"
+              className="btn"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <Plus size={16} />
+              <span>Nueva</span>
+            </Link>
+          </div>
         )}
       </div>
 

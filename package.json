@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:export": "node scripts/export-db.cjs",
-    "db:seed": "node scripts/import-seed.cjs"
+    "db:seed": "node scripts/import-seed.cjs",
+    "import:artist": "tsx scripts/import-artist.ts"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
