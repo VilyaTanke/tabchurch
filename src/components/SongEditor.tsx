@@ -230,7 +230,7 @@ export default function SongEditor({ song }: { song?: Song }) {
         <div className={`editor-split show-${tab}`}>
           <textarea
             ref={ta} name="content" className="input editor" value={content}
-            onChange={(e) => setContent(e.target.value)} spellCheck={false}
+            onChange={(e) => setContent(e.target.value.replace(/[\u200B-\u200D\uFEFF]/g, ""))} spellCheck={false}
             placeholder={"Escribe con acordes entre corchetes:\n[C]Sublime [G]gracia\n\nO pega letra con acordes arriba y pulsa «Acordes arriba → ChordPro»."}
           />
           <div className="preview">

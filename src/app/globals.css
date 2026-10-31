@@ -810,15 +810,17 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 10px rgba(212, 175, 55, 0.1);
 }
 
-.song-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.22em; }
+.song-line { display: flex; flex-wrap: wrap; align-items: flex-end; margin-bottom: 0.2em; }
 .song-line.chorus {
   border-left: 3px solid #dfba73;
   padding-left: 0.75em;
   background: rgba(223, 186, 115, 0.08);
   border-radius: 0 8px 8px 0;
 }
-.song-line.chord-only { margin-bottom: 0.05em; }
+.song-line.chord-only { margin-bottom: 0.18em; align-items: baseline; }
+.song-line.chord-only .seg { flex-direction: row; align-items: baseline; }
 .song-line.chord-only .chord { min-height: auto; }
+.song-line.chord-only .chord.with-spacer { padding-right: 0; }
 .seg { display: inline-flex; flex-direction: column; }
 .chord {
   font-weight: 700;
@@ -828,9 +830,11 @@ h2 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
   min-height: 1.15em;
   line-height: 1.1;
 }
+.chord.empty { padding-right: 0; width: 0; min-height: 1.15em; }
 .chord.raw { color: var(--muted); font-weight: 400; }
 .lyr { white-space: pre-wrap; color: var(--text); }
-.chord-spacer { height: 0; line-height: 0; display: inline-block; white-space: pre; }
+.lyr.chord-pad { font-family: var(--font-geist-mono), ui-monospace, Consolas, monospace; white-space: pre; }
+.chord-spacer { display: inline-block; white-space: pre; font-family: var(--font-geist-mono), ui-monospace, Consolas, monospace; font-size: 0.85em; line-height: 1.1; color: var(--muted); height: auto; }
 .song-comment { margin: 0.55em 0 0.2em; font-weight: 700; font-size: 0.8em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
 .song-gap { height: 0.45em; }
 

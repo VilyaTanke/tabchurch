@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { animate } from "animejs";
 import {
   isChord,
+  isLineChordOnly,
   keyPrefersFlats,
   parseChordPro,
   partitionSongLines,
@@ -79,7 +80,9 @@ export function SongBody({
               }
 
               const hasChords = showChords && l.segments.some((s) => s.chord);
-              const hasLyrics = l.segments.some((s) => s.text && s.text.trim().length > 0);
+              const hasLyrics = !isLineChordOnly(l.segments);
+              if (!showChords && !hasLyrics) return null;
+
               return (
                 <div
                   key={i}
@@ -87,16 +90,33 @@ export function SongBody({
                 >
                   {l.segments.map((s, j) => (
                     <span key={j} className="seg">
-                      {hasChords && (
-                        <span className={`chord ${s.chord && !isChord(s.chord) ? "raw" : ""}`}>
-                          {s.chord || "\u00a0"}
-                        </span>
-                      )}
                       {hasLyrics ? (
-                        <span className="lyr">{s.text || (s.chord ? "\u00a0" : "")}</span>
-                      ) : s.text ? (
-                        <span className="chord-spacer">{s.text}</span>
-                      ) : null}
+                        <>
+                          {hasChords && (
+                            s.chord ? (
+                              <span className={`chord ${!isChord(s.chord) ? "raw" : ""}`}>
+                                {s.chord}
+                              </span>
+                            ) : (
+                              <span className="chord empty" aria-hidden="true" />
+                            )
+                          )}
+                          <span className={`lyr ${s.text && !s.text.trim() ? "chord-pad" : ""}`}>
+                            {s.text || (s.chord ? "\u00a0" : "")}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {hasChords && s.chord && (
+                            <span className={`chord ${!isChord(s.chord) ? "raw" : ""} ${s.text ? "with-spacer" : ""}`}>
+                              {s.chord}
+                            </span>
+                          )}
+                          {s.text ? (
+                            <span className="chord-spacer">{s.text}</span>
+                          ) : null}
+                        </>
+                      )}
                     </span>
                   ))}
                 </div>

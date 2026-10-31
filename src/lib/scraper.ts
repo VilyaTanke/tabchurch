@@ -1,6 +1,6 @@
 import "server-only";
 import * as cheerio from "cheerio";
-import { convertChordsOverLyrics } from "./chordpro";
+import { convertChordsOverLyrics, isChord } from "./chordpro";
 
 export type ScrapedSong = {
   title: string;
@@ -8,6 +8,48 @@ export type ScrapedSong = {
   originalKey: string | null;
   contentChordpro: string;
 };
+
+/**
+ * Reemplaza los marcadores \uE000acorde\uE001 por [acorde] preservando
+ * la columna exacta de cada acorde respecto a la letra inferior.
+ */
+function replaceMarkersPreservingColumns(line: string): string {
+  if (!line.includes("\uE000")) return line;
+  const re = /\uE000([^\uE001]+)\uE001/g;
+  let origCol = 0;
+  let out = "";
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line)) !== null) {
+    const between = line.slice(lastIdx, m.index);
+    origCol += between.length;
+    if (lastIdx === 0) {
+      out += between;
+    } else if (/^\s+$/.test(between)) {
+      const neededSpaces = Math.max(1, origCol - out.length);
+      out += " ".repeat(neededSpaces);
+    } else {
+      out += between;
+    }
+    const chord = m[1].trim();
+    out += `[${chord}]`;
+    origCol += m[1].length;
+    lastIdx = m.index + m[0].length;
+  }
+  out += line.slice(lastIdx);
+  return out;
+}
+
+function cleanScrapedText(text: string): string {
+  return text
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => replaceMarkersPreservingColumns(l.trimEnd()))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -63,19 +105,19 @@ function parseHtml(html: string): ScrapedSong {
     if (km) originalKey = km[1];
   }
 
-  // 3. Extraer el texto con los acordes
+  // 3. Extraer el texto con los acordes preservando las columnas exactas
   const pre = $("pre").first();
   if (pre.length) {
-    // CifraClub reemplazo <b>acorde</b> por [acorde]
-    pre.find("b").each((_, el) => {
-      const chordText = $(el).text().trim();
-      if (chordText) {
-        $(el).replaceWith(`[${chordText}]`);
+    // CifraClub usa <b>acorde</b> y LaCuerda usa <a>acorde</a> dentro de <pre>
+    pre.find("b, a").each((_, el) => {
+      const chordText = $(el).text().replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+      if (chordText && ($(el).is("b") || isChord(chordText))) {
+        $(el).replaceWith(`\uE000${chordText}\uE001`);
       }
     });
-    rawBody = pre.text();
+    rawBody = cleanScrapedText(pre.text());
   } else {
-    rawBody = $(".cifra_conteudo").text() || $("article").text();
+    rawBody = cleanScrapedText($(".cifra_conteudo").text() || $("article").text());
   }
 
   if (!rawBody || rawBody.trim().length === 0) {
@@ -89,7 +131,7 @@ function parseHtml(html: string): ScrapedSong {
 
   if (!originalKey) {
     const firstChordMatch = contentChordpro.match(/\[([A-G][#b]?)([^\]]*)\]/);
-    if (firstChordMatch) {
+    if (firstChordMatch && isChord(firstChordMatch[1] + firstChordMatch[2])) {
       const base = firstChordMatch[1];
       const isMinor = firstChordMatch[2].startsWith("m") && !firstChordMatch[2].startsWith("maj");
       originalKey = base + (isMinor ? "m" : "");
@@ -146,7 +188,7 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
   }
 
   // Extracción del cuerpo
-  let body = markdown;
+  let body = markdown.replace(/[\u200B-\u200D\uFEFF]/g, "");
   if (body.includes("Unpin chords list")) {
     body = body.split("Unpin chords list")[1];
   } else if (body.includes("Key:")) {
@@ -160,6 +202,7 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
   const footerMarkers = [
     "Song details",
     "Did you see an error?",
+    "## Related songs",
     "## All artists",
     "## Songs",
     "## Features",
@@ -175,17 +218,17 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
     }
   }
 
-  // Convertir acordes de CifraClub: **C** -> [C]
-  body = body.replace(/\*\*([A-G][#b]?(?:[a-zA-Z0-9/+#]*)?)\*\*/g, "[$1]");
+  // Convertir acordes de CifraClub: **C** -> marcador para preservar columnas
+  body = body.replace(/\*\*([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\*\*/g, "\uE000$1\uE001");
 
-  // Convertir enlaces de acordes de LaCuerda: [D](http...) -> [D]
-  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#]*)?)\]\([^\)]+\)/g, "[$1]");
+  // Convertir enlaces de acordes de LaCuerda: [D](http...) -> marcador para preservar columnas
+  body = body.replace(/\[([A-G][#b]?(?:[a-zA-Z0-9/+#()-]*)?)\]\([^\)]+\)/g, "\uE000$1\uE001");
 
   // Limpiar imágenes markdown y enlaces residuales
   body = body.replace(/!\[[^\]]*\]\([^\)]+\)/g, "");
   body = body.replace(/^\s*(?:Key|Tono):\s*[A-G][#b]?m?\s*/im, "");
 
-  let contentChordpro = body.trim();
+  let contentChordpro = cleanScrapedText(body);
 
   // Si no tiene acordes inline [C] y parece tener acordes sobre letras, convertir
   if (!contentChordpro.includes("[")) {
@@ -194,7 +237,7 @@ function parseJinaMarkdown(markdown: string): ScrapedSong {
 
   if (!originalKey) {
     const firstChordMatch = contentChordpro.match(/\[([A-G][#b]?)([^\]]*)\]/);
-    if (firstChordMatch) {
+    if (firstChordMatch && isChord(firstChordMatch[1] + firstChordMatch[2])) {
       const base = firstChordMatch[1];
       const isMinor = firstChordMatch[2].startsWith("m") && !firstChordMatch[2].startsWith("maj");
       originalKey = base + (isMinor ? "m" : "");
@@ -233,6 +276,25 @@ export async function scrapeSongFromUrl(url: string): Promise<ScrapedSong> {
   }
 
   if (useFallback) {
+    // 1. Intentar Jina en modo HTML para conservar intacto el <pre> y todos los espacios
+    try {
+      const jinaHtmlResponse = await fetch(`https://r.jina.ai/${parsedUrl.toString()}`, {
+        headers: {
+          "X-Return-Format": "html",
+          "X-No-Cache": "true",
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (jinaHtmlResponse.ok) {
+        const html = await jinaHtmlResponse.text();
+        return parseHtml(html);
+      }
+    } catch {
+      // Continuar a fallback Markdown si falla el modo HTML
+    }
+
+    // 2. Fallback secundario en modo texto/markdown
     try {
       const jinaResponse = await fetch(`https://r.jina.ai/${parsedUrl.toString()}`, {
         headers: {
